@@ -19,13 +19,21 @@ export class AuthService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(RefreshToken) private refreshRepo: Repository<RefreshToken>,
   ) {
-    const clientId = this.config.get<string>('GOOGLE_CLIENT_ID');
-    this.googleClient = new OAuth2Client(clientId);
+    const clientId = this.config.get<string>('GOOGLE_CLIENT_ID') ?? '';
+    this.googleClient = new OAuth2Client(clientId.split(',')[0]?.trim() || undefined);
+  }
+
+  /** Returns allowed Google OAuth client IDs (Android + Web). Token must be issued for one of these. */
+  private getGoogleAudiences(): string[] {
+    const raw = this.config.get<string>('GOOGLE_CLIENT_ID');
+    if (!raw?.trim()) return [];
+    return raw.split(',').map((s) => s.trim()).filter(Boolean);
   }
 
   async validateGoogleToken(idToken: string): Promise<{ sub: string; email: string; name?: string }> {
-    const clientId = this.config.get<string>('GOOGLE_CLIENT_ID');
-    const ticket = await this.googleClient.verifyIdToken({ idToken, audience: clientId });
+    const audiences = this.getGoogleAudiences();
+    if (audiences.length === 0) throw new UnauthorizedException('Google Sign-In not configured (GOOGLE_CLIENT_ID)');
+    const ticket = await this.googleClient.verifyIdToken({ idToken, audience: audiences });
     const payload = ticket.getPayload();
     if (!payload?.sub || !payload?.email) throw new UnauthorizedException('Invalid Google token');
     return { sub: payload.sub, email: payload.email, name: payload.name };

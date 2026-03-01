@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
   google_id VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
-  phone VARCHAR(50) DEFAULT NULL,
+  phone VARCHAR(255) DEFAULT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'expert')),
   expert_status VARCHAR(20) DEFAULT NULL CHECK (expert_status IN ('pending', 'approved', 'rejected')),
   profile_completed SMALLINT NOT NULL DEFAULT 0,
