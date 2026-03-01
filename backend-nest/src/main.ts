@@ -31,7 +31,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 5001;
-  await app.listen(port);
-  console.log(`HeyyPal API running on port ${port}`);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`HeyyPal API running on ${host}:${port}`);
 }
 bootstrap();

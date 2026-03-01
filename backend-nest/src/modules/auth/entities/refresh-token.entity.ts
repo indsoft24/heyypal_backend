@@ -10,22 +10,22 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('refresh_tokens')
 export class RefreshToken {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column()
-  userId: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column()
+  @Column({ name: 'token_hash' })
   tokenHash: string;
 
-  @Column()
+  @Column({ name: 'expires_at' })
   expiresAt: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

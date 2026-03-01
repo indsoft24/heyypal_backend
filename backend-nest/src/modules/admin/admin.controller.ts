@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
 import { AdminService } from './admin.service';
 import { AdminRoleGuard } from './guards/admin-role.guard';
 import { SetMetadata } from '@nestjs/common';
@@ -16,13 +17,26 @@ const AdminOnly = () => SetMetadata('adminRoles', ['admin']);
 const AdminOrSeller = () => SetMetadata('adminRoles', ['admin', 'seller']);
 
 class AdminLoginDto {
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
   password: string;
 }
 
 class CreateSellerDto {
+  @IsString()
+  @IsNotEmpty()
   name: string;
+
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters' })
   password: string;
 }
 

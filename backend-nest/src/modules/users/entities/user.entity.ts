@@ -22,10 +22,10 @@ export enum ExpertStatus {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, name: 'google_id' })
   googleId: string;
 
   @Column()
@@ -34,23 +34,28 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  /** Encrypted at rest (PII) */
-  @Column({ nullable: true })
+  /** Encrypted at rest (PII); DB column: phone */
+  @Column({ nullable: true, name: 'phone' })
   phoneEnc: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
-  @Column({ type: 'enum', enum: ExpertStatus, nullable: true })
+  @Column({ type: 'enum', enum: ExpertStatus, nullable: true, name: 'expert_status' })
   expertStatus: ExpertStatus | null;
 
-  @Column({ default: false })
+  @Column({
+    name: 'profile_completed',
+    type: 'smallint',
+    default: 0,
+    transformer: { to: (v: boolean) => (v ? 1 : 0), from: (v: number) => v === 1 },
+  })
   profileCompleted: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @OneToMany(() => RefreshToken, (rt) => rt.user)

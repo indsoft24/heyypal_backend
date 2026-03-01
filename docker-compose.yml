@@ -65,6 +65,7 @@ services:
       dockerfile: Dockerfile
     environment:
       PORT: 5001
+      HOST: 0.0.0.0
       NODE_ENV: production
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -81,6 +82,8 @@ services:
       ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:-admin@heyypal.com}
       ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-Admin123!}
       ADMIN_SEED_NAME: ${ADMIN_SEED_NAME:-Admin}
+      # Allow browser requests from VPS/public URL (comma-separated; unset = allow all)
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080,http://127.0.0.1:3000}
     volumes:
       - backend_storage:/app/storage
     ports:

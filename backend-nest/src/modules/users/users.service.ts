@@ -11,15 +11,15 @@ export class UsersService {
     private encryption: EncryptionService,
   ) {}
 
-  async findById(id: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { id } });
+  async findById(id: number | string): Promise<User | null> {
+    return this.userRepo.findOne({ where: { id: Number(id) } });
   }
 
   async completeProfile(
-    userId: string,
+    userId: number | string,
     data: { name: string; phone: string; role: UserRole },
   ): Promise<User> {
-    const user = await this.userRepo.findOneOrFail({ where: { id: userId } });
+    const user = await this.userRepo.findOneOrFail({ where: { id: Number(userId) } });
     user.name = data.name;
     user.phoneEnc = this.encryption.encrypt(data.phone);
     user.role = data.role;

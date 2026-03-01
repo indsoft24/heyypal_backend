@@ -74,7 +74,7 @@ export class AdminService implements OnModuleInit {
 
   async approveExpert(id: string) {
     const user = await this.userRepo.findOne({
-      where: { id, role: UserRole.EXPERT },
+      where: { id: Number(id), role: UserRole.EXPERT },
     });
     if (!user) throw new NotFoundException('Expert not found');
     user.expertStatus = ExpertStatus.APPROVED;
@@ -84,7 +84,7 @@ export class AdminService implements OnModuleInit {
 
   async rejectExpert(id: string) {
     const user = await this.userRepo.findOne({
-      where: { id, role: UserRole.EXPERT },
+      where: { id: Number(id), role: UserRole.EXPERT },
     });
     if (!user) throw new NotFoundException('Expert not found');
     user.expertStatus = ExpertStatus.REJECTED;
