@@ -13,7 +13,14 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  app.enableCors({ origin: process.env.CORS_ORIGIN?.split(',') || '*' });
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: 'Authorization,Content-Type',
+  });
 
   const config = new DocumentBuilder()
     .setTitle('HeyyPal API')
