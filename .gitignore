@@ -32,3 +32,11 @@ npm-debug.log*
 admin_panel/.vercel/
 backend-nest/.env
 backend-nest/coverage
+
+# Exclude from this repo (backend monorepo only)
+.github/
+Client_Documentation.md
+Technical_Documentation.md
+android/
+docs/
+heyypal.png
