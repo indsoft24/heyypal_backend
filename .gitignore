@@ -1,0 +1,33 @@
+# Monorepo: docker, backend, admin_panel
+
+# Env and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.docker.example
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+backend/dist/
+admin_panel/.next/
+admin_panel/out/
+admin_panel/build/
+
+# IDE and OS
+.idea/
+*.iml
+.DS_Store
+
+# Logs and debug
+*.log
+npm-debug.log*
+.pnpm-debug.log*
+
+# Misc
+*.tsbuildinfo
+admin_panel/.vercel/
+backend/config/*.json

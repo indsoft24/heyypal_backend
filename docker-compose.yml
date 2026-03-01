@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PG_USER:-heyypal}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-heyypal}
+      POSTGRES_DB: ${PG_DATABASE:-heyypal}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U heyypal -d heyypal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-heyypal}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5001
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: ${PG_USER:-heyypal}
+      PG_PASSWORD: ${PG_PASSWORD:-heyypal}
+      PG_DATABASE: ${PG_DATABASE:-heyypal}
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DB: ${MONGODB_DB:-heyypal}
+    ports:
+      - "5001:5001"
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
+
+  admin_panel:
+    build:
+      context: ./admin_panel
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - admin_panel
+
+volumes:
+  postgres_data:
+  mongodb_data:
