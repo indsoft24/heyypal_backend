@@ -1,4 +1,13 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5001';
+function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname } = window.location;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `${protocol}//${hostname}:8080`;
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+}
+const API_BASE = getApiBase();
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;

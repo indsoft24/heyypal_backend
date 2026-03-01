@@ -46,6 +46,8 @@ Default admin: `admin@heyypal.com` / `Admin123!` (if seeded by Nest backend)
 
 If you see “Cannot reach API at … Failed to fetch”, set `NEXT_PUBLIC_API_URL` to your VPS IP (or domain) and port 8080, then rebuild the admin_panel image.
 
+The admin panel also uses a **runtime fallback**: when opened from a non-localhost host (e.g. your VPS IP), it calls the API at `http://<same-host>:8080`. After one deploy/rebuild, login works on the VPS without setting `NEXT_PUBLIC_API_URL`.
+
 ## Local dev
 
 - **Backend (Nest)**: `cd backend-nest && npm install && npm run start:dev` (requires PostgreSQL, MongoDB, Redis, RabbitMQ)
