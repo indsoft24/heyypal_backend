@@ -1,3 +1,6 @@
+# HeyyPal monorepo: Nest backend, admin_panel, nginx (PostgreSQL, MongoDB, Redis, RabbitMQ)
+# Usage: docker compose up -d --build
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -30,33 +33,68 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
-      context: ./backend
+      context: ./backend-nest
       dockerfile: Dockerfile
     environment:
       PORT: 5001
+      NODE_ENV: production
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${PG_USER:-heyypal}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-heyypal}
+      POSTGRES_DB: ${PG_DATABASE:-heyypal}
+      MONGO_URI: mongodb://mongodb:27017/${MONGODB_DB:-heyypal}
+      REDIS_URI: redis://redis:6379
+      RABBITMQ_URI: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      PG_HOST: postgres
-      PG_PORT: 5432
-      PG_USER: ${PG_USER:-heyypal}
-      PG_PASSWORD: ${PG_PASSWORD:-heyypal}
-      PG_DATABASE: ${PG_DATABASE:-heyypal}
-      MONGODB_URI: mongodb://mongodb:27017
-      MONGODB_DB: ${MONGODB_DB:-heyypal}
+      PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod!!}
+      FILE_STORAGE_PATH: /app/storage
+    volumes:
+      - backend_storage:/app/storage
     ports:
       - "5001:5001"
     depends_on:
       postgres: { condition: service_healthy }
       mongodb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
 
   admin_panel:
     build:
       context: ./admin_panel
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
+        # Use your VPS IP or domain so the browser can reach the API (e.g. http://187.77.191.120:8080)
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
     ports:
       - "3000:3000"
     depends_on:
@@ -65,7 +103,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
@@ -75,3 +113,5 @@ services:
 volumes:
   postgres_data:
   mongodb_data:
+  redis_data:
+  backend_storage:

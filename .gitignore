@@ -1,4 +1,4 @@
-# Monorepo: docker, backend, admin_panel
+# Monorepo: docker, backend-nest (NestJS), admin_panel
 
 # Env and secrets
 .env
@@ -12,7 +12,7 @@ node_modules/
 **/node_modules/
 
 # Build outputs
-backend/dist/
+**/dist/
 admin_panel/.next/
 admin_panel/out/
 admin_panel/build/
@@ -30,4 +30,5 @@ npm-debug.log*
 # Misc
 *.tsbuildinfo
 admin_panel/.vercel/
-backend/config/*.json
+backend-nest/.env
+backend-nest/coverage
