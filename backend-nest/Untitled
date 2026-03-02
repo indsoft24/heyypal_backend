@@ -1,0 +1,228 @@
+Android Kotlin Integration for 1-1 Audio Call (HeyyPal)
+
+We are integrating 1-1 Audio Calling into the HeyyPal Android app.
+
+There is an existing Kotlin reference implementation in:
+
+ChatAura Android project:
+/Users/ashishtayal/AndroidStudioProjects/ChatAura/
+
+Use it ONLY as:
+
+✅ UI flow reference
+✅ Call state handling reference
+
+❌ Do NOT copy signaling logic
+❌ Do NOT use Laravel API structure
+
+Backend is now:
+
+NestJS + WebSocket Signaling + WebRTC
+
+🎯 Goal
+
+Build Kotlin Android integration layer for:
+
+NestJS-based 1-1 Audio Call System
+
+Using:
+
+WebRTC (audio only)
+
+Socket.IO signaling
+
+JWT authentication
+
+📱 Android Modules to Create
+
+Generate:
+
+CallManager
+WebRTCClient
+SocketManager
+CallStateRepository
+CallService
+🔐 Authentication
+
+Socket must connect using:
+
+JWT Token
+
+Example:
+
+socket = IO.socket(SERVER_URL, optionsWithToken)
+📡 Socket Events to Handle
+
+Implement listeners:
+
+call:ringing
+call:offer
+call:answer
+call:ice-candidate
+call:reject
+call:busy
+call:timeout
+call:end
+
+Emit:
+
+call:initiate
+call:accept
+call:reject
+call:end
+call:offer
+call:answer
+call:ice-candidate
+📞 Call Flow (Android Side)
+1. Initiate Call
+
+User taps Call → trigger:
+
+call:initiate(receiverId)
+
+Show:
+
+Outgoing Call UI
+
+2. Incoming Call
+
+On:
+
+call:ringing
+
+Show:
+
+Incoming Call Screen
+
+Options:
+
+Accept
+
+Reject
+
+3. Accept Call
+
+Emit:
+
+call:accept
+
+Start:
+
+WebRTC Peer Connection
+
+4. WebRTC Setup
+
+Generate:
+
+Audio Media Stream
+
+PeerConnection
+
+ICE exchange
+
+Handle:
+
+offer
+answer
+iceCandidates
+5. Ongoing Call
+
+Maintain:
+
+CALL_CONNECTING
+CALL_ACTIVE
+CALL_ENDED
+CALL_MISSED
+CALL_REJECTED
+CALL_BUSY
+
+Use:
+
+CallStateRepository
+
+6. End Call
+
+Emit:
+
+call:end
+
+Close:
+
+PeerConnection
+
+Audio track
+
+UI
+
+🧠 Busy Handling
+
+If:
+
+call:busy
+
+Show:
+
+User Busy UI
+
+⏱ Timeout Handling
+
+If:
+
+call:timeout
+
+Mark:
+
+Missed Call
+
+🎧 WebRTC Config
+
+Use:
+
+STUN servers
+
+stun:stun.l.google.com:19302
+
+Audio only:
+
+Disable video tracks.
+
+🗃 Local Call State
+
+Maintain in memory:
+
+sessionId
+callerId
+receiverId
+callStatus
+peerConnection
+📦 Deliverables
+
+Generate:
+
+Kotlin Socket Manager
+
+WebRTC Client
+
+Call Manager
+
+Incoming Call Handler
+
+Outgoing Call Flow
+
+Audio-only PeerConnection setup
+
+📌 Important
+
+ChatAura is reference for:
+
+UI
+
+lifecycle
+
+call states
+
+HeyyPal must use:
+
+NestJS socket signaling structure.
+
+Build this as production-ready scalable Android layer.
