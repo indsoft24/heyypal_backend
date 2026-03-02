@@ -20,6 +20,11 @@ export enum ExpertStatus {
   REJECTED = 'rejected',
 }
 
+export enum ExpertType {
+  SUPPORTIVE = 'supportive',
+  PROFESSIONAL = 'professional',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -43,6 +48,15 @@ export class User {
 
   @Column({ type: 'enum', enum: ExpertStatus, nullable: true, name: 'expert_status' })
   expertStatus: ExpertStatus | null;
+
+  @Column({ type: 'enum', enum: ExpertType, nullable: true, name: 'expert_type' })
+  expertType: ExpertType | null;
+
+  @Column({ nullable: true, name: 'gender' })
+  gender: string | null;
+
+  @Column({ nullable: true, name: 'date_of_birth' })
+  dateOfBirth: string | null;
 
   @Column({
     name: 'profile_completed',

@@ -64,7 +64,24 @@ export interface Expert {
   phone: string | null;
   role: string;
   expert_status: string | null;
+  expert_type?: string | null;
+  gender?: string | null;
+  date_of_birth?: string | null;
   created_at?: string;
+  profile?: {
+    id: number;
+    type: string;
+    category: string;
+    bio: string;
+    languages_spoken: string[];
+    photos: string[] | null;
+    intro_video_url: string | null;
+    intro_video_compressed_url: string | null;
+    degree_certificate_url: string | null;
+    aadhar_url: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
 }
 
 export interface Seller {

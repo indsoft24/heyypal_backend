@@ -69,74 +69,136 @@ export default function ExpertsPage() {
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
       )}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600">Phone</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600">Created</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-600">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {experts.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  No expert requests yet.
-                </td>
-              </tr>
-            ) : (
-              experts.map((ex) => (
-                <tr key={ex.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm text-slate-800">{ex.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{ex.email}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{ex.phone ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                        ex.expert_status === 'approved'
-                          ? 'bg-green-100 text-green-800'
-                          : ex.expert_status === 'rejected'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {ex.expert_status ?? 'pending'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-500">
-                    {ex.created_at
-                      ? new Date(ex.created_at).toLocaleDateString()
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {ex.expert_status === 'pending' && (
-                      <span className="inline-flex gap-2">
-                        <button
-                          onClick={() => approve(ex.id)}
-                          disabled={actioning !== null}
-                          className="rounded bg-green-600 px-2 py-1 text-sm text-white hover:bg-green-700 disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => reject(ex.id)}
-                          disabled={actioning !== null}
-                          className="rounded bg-red-600 px-2 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
+      <div className="space-y-4">
+        {experts.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
+            No expert requests yet.
+          </div>
+        ) : (
+          experts.map((ex) => (
+            <div
+              key={ex.id}
+              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+            >
+              <div className="flex items-start justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-800">{ex.name}</p>
+                    {ex.expert_type && (
+                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        {ex.expert_type === 'professional' ? 'Professional expert' : 'Supportive expert'}
                       </span>
                     )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <p className="text-xs text-slate-500">{ex.email}</p>
+                  {ex.google_id && (
+                    <p className="text-[11px] text-slate-400">Google ID: {ex.google_id}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      ex.expert_status === 'approved'
+                        ? 'bg-green-100 text-green-800'
+                        : ex.expert_status === 'rejected'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {ex.expert_status ?? 'pending'}
+                  </span>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Joined {ex.created_at ? new Date(ex.created_at).toLocaleDateString() : '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 px-4 py-4 md:grid-cols-3">
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium text-slate-700">User details</p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Role:</span> {ex.role}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Phone:</span> {ex.phone ?? '—'}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Gender:</span> {ex.gender ?? '—'}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Date of birth:</span>{' '}
+                    {ex.date_of_birth ?? '—'}
+                  </p>
+                </div>
+
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium text-slate-700">Expert profile</p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Category:</span>{' '}
+                    {ex.profile?.category ?? '—'}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Languages:</span>{' '}
+                    {ex.profile?.languages_spoken?.length
+                      ? ex.profile.languages_spoken.join(', ')
+                      : '—'}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Bio:</span>{' '}
+                    {ex.profile?.bio ?? '—'}
+                  </p>
+                </div>
+
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium text-slate-700">Media & documents</p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Photos:</span>{' '}
+                    {ex.profile?.photos?.length ?? 0} file(s)
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Intro video:</span>{' '}
+                    {ex.profile?.intro_video_compressed_url
+                      ? 'Compressed video available'
+                      : ex.profile?.intro_video_url
+                        ? 'Original video only'
+                        : '—'}
+                  </p>
+                  {ex.expert_type === 'professional' && (
+                    <>
+                      <p className="text-slate-600">
+                        <span className="font-medium">Degree/certificate:</span>{' '}
+                        {ex.profile?.degree_certificate_url ? 'Uploaded' : 'Missing'}
+                      </p>
+                      <p className="text-slate-600">
+                        <span className="font-medium">Aadhaar:</span>{' '}
+                        {ex.profile?.aadhar_url ? 'Uploaded' : 'Missing'}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {ex.expert_status === 'pending' && (
+                <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-4 py-3">
+                  <button
+                    onClick={() => reject(ex.id)}
+                    disabled={actioning !== null}
+                    className="rounded border border-red-600 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => approve(ex.id)}
+                    disabled={actioning !== null}
+                    className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
