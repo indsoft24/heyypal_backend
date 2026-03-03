@@ -49,13 +49,13 @@ export class User {
   @Column({ type: 'enum', enum: ExpertStatus, nullable: true, name: 'expert_status' })
   expertStatus: ExpertStatus | null;
 
-  @Column({ type: 'enum', enum: ExpertType, nullable: true, name: 'expert_type' })
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'expert_type' })
   expertType: ExpertType | null;
 
-  @Column({ nullable: true, name: 'gender' })
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'gender' })
   gender: string | null;
 
-  @Column({ nullable: true, name: 'date_of_birth' })
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'date_of_birth' })
   dateOfBirth: string | null;
 
   @Column({

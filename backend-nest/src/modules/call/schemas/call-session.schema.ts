@@ -42,10 +42,10 @@ export class CallSession {
   @Prop({ type: [Number], default: [] })
   connectedUsers: number[];
 
-  @Prop({ default: () => new Date() })
+  @Prop({ type: Date, default: () => new Date() })
   createdAt: Date;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   endedAt: Date | null;
 }
 

@@ -4,6 +4,84 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminApi, type Expert, getToken, clearToken } from '@/lib/api';
 
+function ExpertPhotos({ urls }: { urls: string[] | null }) {
+  if (!urls?.length) return <p className="text-slate-500 text-sm">No photos</p>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {urls.map((url, i) => (
+        <a
+          key={i}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-lg overflow-hidden border border-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500"
+        >
+          <img
+            src={url}
+            alt={`Expert photo ${i + 1}`}
+            className="h-20 w-20 object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="%23e2e8f0" width="80" height="80"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-size="10">Error</text></svg>';
+            }}
+          />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function ExpertVideo({
+  compressedUrl,
+  originalUrl,
+}: {
+  compressedUrl: string | null;
+  originalUrl: string | null;
+}) {
+  const src = compressedUrl || originalUrl || null;
+  if (!src) return <p className="text-slate-500 text-sm">No intro video</p>;
+  return (
+    <div className="space-y-1">
+      <video
+        src={src}
+        controls
+        preload="metadata"
+        className="max-h-48 w-full rounded-lg border border-slate-200 bg-slate-900"
+        onError={(e) => {
+          (e.target as HTMLVideoElement).style.display = 'none';
+        }}
+      />
+      <a
+        href={src}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-indigo-600 hover:underline"
+      >
+        Open in new tab
+      </a>
+    </div>
+  );
+}
+
+function DocumentLink({
+  label,
+  url,
+}: {
+  label: string;
+  url: string | null;
+}) {
+  if (!url) return <p className="text-slate-500 text-sm">{label}: —</p>;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm text-indigo-600 hover:underline"
+    >
+      {label}
+    </a>
+  );
+}
+
 export default function ExpertsPage() {
   const router = useRouter();
   const [experts, setExperts] = useState<Expert[]>([]);
@@ -149,31 +227,31 @@ export default function ExpertsPage() {
                   </p>
                 </div>
 
-                <div className="space-y-1 text-sm">
+                <div className="space-y-3 text-sm">
                   <p className="font-medium text-slate-700">Media & documents</p>
-                  <p className="text-slate-600">
-                    <span className="font-medium">Photos:</span>{' '}
-                    {ex.profile?.photos?.length ?? 0} file(s)
-                  </p>
-                  <p className="text-slate-600">
-                    <span className="font-medium">Intro video:</span>{' '}
-                    {ex.profile?.intro_video_compressed_url
-                      ? 'Compressed video available'
-                      : ex.profile?.intro_video_url
-                        ? 'Original video only'
-                        : '—'}
-                  </p>
+                  <div>
+                    <p className="font-medium text-slate-600 mb-1">Photos</p>
+                    <ExpertPhotos urls={ex.profile?.photos ?? null} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-600 mb-1">Intro video</p>
+                    <ExpertVideo
+                      compressedUrl={ex.profile?.intro_video_compressed_url ?? null}
+                      originalUrl={ex.profile?.intro_video_url ?? null}
+                    />
+                  </div>
                   {ex.expert_type === 'professional' && (
-                    <>
-                      <p className="text-slate-600">
-                        <span className="font-medium">Degree/certificate:</span>{' '}
-                        {ex.profile?.degree_certificate_url ? 'Uploaded' : 'Missing'}
-                      </p>
-                      <p className="text-slate-600">
-                        <span className="font-medium">Aadhaar:</span>{' '}
-                        {ex.profile?.aadhar_url ? 'Uploaded' : 'Missing'}
-                      </p>
-                    </>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-slate-600">Documents</p>
+                      <DocumentLink
+                        label="Degree/certificate"
+                        url={ex.profile?.degree_certificate_url ?? null}
+                      />
+                      <DocumentLink
+                        label="Aadhaar"
+                        url={ex.profile?.aadhar_url ?? null}
+                      />
+                    </div>
                   )}
                 </div>
               </div>

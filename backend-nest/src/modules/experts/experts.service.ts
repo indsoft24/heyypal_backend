@@ -18,7 +18,7 @@ export class ExpertsService {
     languagesSpoken: string[];
     photos: string[];
     introVideoUrl: string;
-    introVideoCompressedUrl: string;
+    introVideoCompressedUrl?: string;
     degreeCertificateUrl?: string;
     aadharUrl?: string;
   }): Promise<ExpertProfile> {
@@ -38,6 +38,8 @@ export class ExpertsService {
     const profile = this.expertRepo.create({
       user,
       ...payload,
+      introVideoCompressedUrl:
+        payload.introVideoCompressedUrl ?? payload.introVideoUrl,
     });
 
     return this.expertRepo.save(profile);

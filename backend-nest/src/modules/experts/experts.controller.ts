@@ -38,9 +38,9 @@ class SubmitExpertProfileDto {
   @IsNotEmpty()
   introVideoUrl: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  introVideoCompressedUrl: string;
+  introVideoCompressedUrl?: string;
 
   @IsOptional()
   @IsString()

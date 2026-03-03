@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR(255) DEFAULT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'expert')),
   expert_status VARCHAR(20) DEFAULT NULL CHECK (expert_status IN ('pending', 'approved', 'rejected')),
+  expert_type VARCHAR(20) DEFAULT NULL,
+  gender VARCHAR(20) DEFAULT NULL,
+  date_of_birth VARCHAR(20) DEFAULT NULL,
   profile_completed SMALLINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -15,6 +18,24 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_role_expert ON users (role, expert_status);
+
+CREATE TABLE IF NOT EXISTS expert_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  type VARCHAR(20) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  bio VARCHAR(300) NOT NULL,
+  languages_spoken TEXT NOT NULL,
+  photos TEXT DEFAULT NULL,
+  intro_video VARCHAR(255) DEFAULT NULL,
+  intro_video_compressed VARCHAR(255) DEFAULT NULL,
+  degree_certificate VARCHAR(255) DEFAULT NULL,
+  aadhar VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_profiles_user_id ON expert_profiles (user_id);
 
 CREATE TABLE IF NOT EXISTS admin_users (
   id SERIAL PRIMARY KEY,

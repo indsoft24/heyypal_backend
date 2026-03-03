@@ -18,8 +18,8 @@ export enum CallStatus {
 }
 
 @Entity('call_logs')
-@Index(['caller_id', 'created_at'])
-@Index(['receiver_id', 'created_at'])
+@Index(['callerId', 'createdAt'])
+@Index(['receiverId', 'createdAt'])
 export class CallLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;

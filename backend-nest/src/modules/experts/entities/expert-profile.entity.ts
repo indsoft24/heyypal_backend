@@ -5,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { ExpertType } from '../../users/entities/user.entity';
@@ -26,6 +27,7 @@ export class ExpertProfile {
   id: number;
 
   @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({ type: 'enum', enum: ExpertType })

@@ -11,6 +11,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ExpertsModule } from './modules/experts/experts.module';
 import { CallModule } from './modules/call/call.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { CallModule } from './modules/call/call.module';
     AdminModule,
     CallModule,
     ExpertsModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
