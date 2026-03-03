@@ -92,6 +92,31 @@ export interface Seller {
   created_at?: string;
 }
 
+/** Pending expert intro video (key-based storage). */
+export interface PendingExpertVideo {
+  id: string;
+  userId: number;
+  videoKey: string;
+  thumbnailKey: string | null;
+  duration: number;
+  status: string;
+  createdAt: string;
+  approvedAt: string | null;
+  videoUrl: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    expertStatus: string | null;
+  };
+}
+
+/** Public URL for a stored file key (GET /api/media/:key). */
+export function getMediaUrl(fileKey: string): string {
+  return `${API_BASE}/api/media/${encodeURIComponent(fileKey)}`;
+}
+
 export const adminApi = {
   login: (email: string, password: string) =>
     api<{ accessToken: string; user: AdminUser }>('/admin/auth/login', {
@@ -104,6 +129,12 @@ export const adminApi = {
     api<{ message: string }>(`/admin/experts/${id}/approve`, { method: 'POST' }),
   rejectExpert: (id: number) =>
     api<{ message: string }>(`/admin/experts/${id}/reject`, { method: 'POST' }),
+  getPendingExpertVideos: () =>
+    api<PendingExpertVideo[]>('/admin/expert/videos/pending'),
+  approveExpertVideo: (id: string) =>
+    api<PendingExpertVideo>(`/admin/expert/video/approve/${id}`, { method: 'POST' }),
+  rejectExpertVideo: (id: string) =>
+    api<PendingExpertVideo>(`/admin/expert/video/reject/${id}`, { method: 'POST' }),
   getSellers: () => api<{ sellers: Seller[] }>('/admin/sellers'),
   createSeller: (name: string, email: string, password: string) =>
     api<{ user: Seller }>('/admin/sellers', {

@@ -11,6 +11,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
 import { AdminService } from './admin.service';
 import { AdminRoleGuard } from './guards/admin-role.guard';
+import { ExpertVideoService } from '../media/expert-video.service';
 import { SetMetadata } from '@nestjs/common';
 
 const AdminOnly = () => SetMetadata('adminRoles', ['admin']);
@@ -43,7 +44,10 @@ class CreateSellerDto {
 @ApiTags('admin')
 @Controller('admin')
 export class AdminController {
-  constructor(private admin: AdminService) {}
+  constructor(
+    private admin: AdminService,
+    private expertVideo: ExpertVideoService,
+  ) {}
 
   @Post('auth/login')
   @ApiOperation({ summary: 'Admin panel login (email/password)' })
@@ -76,6 +80,33 @@ export class AdminController {
   @ApiOperation({ summary: 'Reject expert (admin only)' })
   async rejectExpert(@Param('id') id: string) {
     return this.admin.rejectExpert(id);
+  }
+
+  @Get('expert/videos/pending')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List pending expert intro videos (admin only)' })
+  async getPendingExpertVideos() {
+    return this.expertVideo.listPending();
+  }
+
+  @Post('expert/video/approve/:id')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve expert intro video (admin only)' })
+  async approveExpertVideo(@Param('id') id: string) {
+    return this.expertVideo.approve(id);
+  }
+
+  @Post('expert/video/reject/:id')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reject expert intro video (admin only)' })
+  async rejectExpertVideo(@Param('id') id: string) {
+    return this.expertVideo.reject(id);
   }
 
   @Get('sellers')

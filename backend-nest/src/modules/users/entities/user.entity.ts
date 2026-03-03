@@ -66,6 +66,13 @@ export class User {
   })
   profileCompleted: boolean;
 
+  /** File key only (e.g. profile/user/123/photo1.jpg). No full URL. */
+  @Column({ nullable: true, name: 'profile_photo_1_key' })
+  profilePhoto1Key: string | null;
+
+  @Column({ nullable: true, name: 'profile_photo_2_key' })
+  profilePhoto2Key: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

@@ -17,7 +17,7 @@ export class ExpertsService {
     bio: string;
     languagesSpoken: string[];
     photos: string[];
-    introVideoUrl: string;
+    introVideoUrl?: string;
     introVideoCompressedUrl?: string;
     degreeCertificateUrl?: string;
     aadharUrl?: string;
@@ -35,11 +35,13 @@ export class ExpertsService {
     user.expertType = payload.type;
     await this.userRepo.save(user);
 
+    const introUrl = payload.introVideoUrl?.trim() || null;
+    const introCompressed = payload.introVideoCompressedUrl?.trim() || introUrl;
     const profile = this.expertRepo.create({
       user,
       ...payload,
-      introVideoCompressedUrl:
-        payload.introVideoCompressedUrl ?? payload.introVideoUrl,
+      introVideoUrl: introUrl,
+      introVideoCompressedUrl: introCompressed,
     });
 
     return this.expertRepo.save(profile);

@@ -12,6 +12,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ExpertsModule } from './modules/experts/experts.module';
 import { CallModule } from './modules/call/call.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { UploadModule } from './modules/upload/upload.module';
     CallModule,
     ExpertsModule,
     UploadModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

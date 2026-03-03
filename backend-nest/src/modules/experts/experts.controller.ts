@@ -34,9 +34,9 @@ class SubmitExpertProfileDto {
   @IsString({ each: true })
   photos: string[];
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  introVideoUrl: string;
+  introVideoUrl?: string;
 
   @IsOptional()
   @IsString()

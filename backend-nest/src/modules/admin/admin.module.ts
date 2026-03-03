@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminUser } from './entities/admin-user.entity';
 import { User } from '../users/entities/user.entity';
 import { ExpertProfile } from '../experts/entities/expert-profile.entity';
+import { MediaModule } from '../media/media.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AdminRoleGuard } from './guards/admin-role.guard';
@@ -12,6 +13,7 @@ import { AdminRoleGuard } from './guards/admin-role.guard';
 @Module({
   imports: [
     TypeOrmModule.forFeature([AdminUser, User, ExpertProfile]),
+    MediaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
