@@ -17,13 +17,23 @@ export class UsersService {
 
   async completeProfile(
     userId: number | string,
-    data: { name: string; phone: string; role: UserRole },
+    data: {
+      name: string;
+      phone: string;
+      role: UserRole;
+      gender?: string;
+      dateOfBirth?: string;
+      date_of_birth?: string;
+    },
   ): Promise<User> {
     const user = await this.userRepo.findOneOrFail({ where: { id: Number(userId) } });
     user.name = data.name;
     user.phoneEnc = this.encryption.encrypt(data.phone);
     user.role = data.role;
     user.expertStatus = data.role === UserRole.EXPERT ? ExpertStatus.PENDING : null;
+    if (data.gender !== undefined) user.gender = data.gender || null;
+    const dob = data.dateOfBirth ?? data.date_of_birth;
+    if (dob !== undefined) user.dateOfBirth = dob || null;
     user.profileCompleted = true;
     return this.userRepo.save(user);
   }

@@ -1,6 +1,6 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, MaxLength } from 'class-validator';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -30,11 +30,29 @@ class CompleteProfileDto {
 
   @IsEnum(UserRole)
   role: UserRole;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  gender?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  dateOfBirth?: string;
+
+  /** Alternative key for clients that send snake_case */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  date_of_birth?: string;
 }
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private auth: AuthService,
     private users: UsersService,
@@ -60,6 +78,14 @@ export class AuthController {
     @CurrentUser('userId') userId: string,
     @Body() dto: CompleteProfileDto,
   ) {
-    return this.users.completeProfile(userId, dto);
+    this.logger.log(`profile/complete called userId=${userId} name=${dto.name} role=${dto.role}`);
+    try {
+      const user = await this.users.completeProfile(userId, dto);
+      this.logger.log(`profile/complete success userId=${userId}`);
+      return user;
+    } catch (err) {
+      this.logger.error(`profile/complete failed userId=${userId}`, (err as Error)?.stack ?? err);
+      throw err;
+    }
   }
 }
