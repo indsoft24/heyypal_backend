@@ -19,6 +19,11 @@ CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_role_expert ON users (role, expert_status);
 
+-- Profile photo keys (used by media/profile-photo.service)
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS profile_photo_1_key VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS profile_photo_2_key VARCHAR(255) DEFAULT NULL;
+
 CREATE TABLE IF NOT EXISTS expert_profiles (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
