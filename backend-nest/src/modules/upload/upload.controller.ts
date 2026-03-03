@@ -32,7 +32,7 @@ const multerMemory = memoryStorage();
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(private readonly uploadService: UploadService) { }
 
   @Post('expert/photos')
   @ApiBearerAuth()

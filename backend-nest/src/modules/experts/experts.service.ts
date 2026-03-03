@@ -9,7 +9,7 @@ export class ExpertsService {
   constructor(
     @InjectRepository(ExpertProfile) private expertRepo: Repository<ExpertProfile>,
     @InjectRepository(User) private userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   async submitExpertProfile(userId: number, payload: {
     type: ExpertType;
