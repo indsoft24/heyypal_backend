@@ -29,10 +29,10 @@ export class ExpertVideo {
   user: User;
 
   /** File key only (e.g. expert/456/intro.mp4). */
-  @Column({ name: 'video_key' })
+  @Column({ type: 'varchar', length: 255, name: 'video_key' })
   videoKey: string;
 
-  @Column({ name: 'thumbnail_key', nullable: true })
+  @Column({ type: 'varchar', length: 255, name: 'thumbnail_key', nullable: true })
   thumbnailKey: string | null;
 
   /** Duration in seconds. */
