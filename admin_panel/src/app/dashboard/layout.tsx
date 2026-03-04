@@ -57,12 +57,6 @@ export default function DashboardLayout({
             Expert requests
           </Link>
           <Link
-            href="/dashboard/expert-videos"
-            className={`block rounded-lg px-3 py-2 text-sm ${pathname === '/dashboard/expert-videos' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
-          >
-            Expert videos
-          </Link>
-          <Link
             href="/dashboard/sellers"
             className={`block rounded-lg px-3 py-2 text-sm ${pathname === '/dashboard/sellers' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
           >
