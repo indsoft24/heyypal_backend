@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -68,6 +69,14 @@ export class ExpertsController {
     @Body() dto: SubmitExpertProfileDto,
   ) {
     return this.experts.submitExpertProfile(Number(userId), dto);
+  }
+
+  @Get('discover')
+  @ApiOperation({
+    summary: 'Public list of approved experts for discovery/home screen',
+  })
+  async discover() {
+    return this.experts.listDiscoverExperts();
   }
 }
 
