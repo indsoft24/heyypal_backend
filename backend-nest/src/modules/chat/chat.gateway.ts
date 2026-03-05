@@ -75,19 +75,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { event: 'error', data: 'Unauthorized' };
     }
 
-    this.logger.log(`Incoming message from ${user.userId} to ${dto.receiverId}`);
+    this.logger.log(`Incoming message from ${user.userId} to ${dto.receiverId}: "${dto.content.substring(0, 20)}..."`);
 
     try {
       const senderId = Number(user.userId);
       const message = await this.chatService.sendMessage(senderId, dto);
+      this.logger.debug(`Message stored in DB with ID: ${message.id}`);
 
       // Send to receiver if online
       const receiverSocketId = this.userSockets.get(dto.receiverId);
       if (receiverSocketId) {
-        this.logger.debug(`Broadcasting to receiver ${dto.receiverId} socket ${receiverSocketId}`);
+        this.logger.debug(`Broadcasting newMessage to receiver ${dto.receiverId} socket ${receiverSocketId}`);
         this.server.to(receiverSocketId).emit('newMessage', message);
       } else {
-        this.logger.debug(`Receiver ${dto.receiverId} is offline, notification already sent by service`);
+        this.logger.debug(`Receiver ${dto.receiverId} is offline (socket not registered)`);
       }
 
       // Send acknowledgment back to sender
