@@ -73,4 +73,48 @@ export class ChatService {
             { isRead: true },
         );
     }
+
+    async getChatList(userId: number) {
+        const messages = await this.messageRepo.createQueryBuilder('m')
+            .where('m.senderId = :userId OR m.receiverId = :userId', { userId })
+            .orderBy('m.createdAt', 'DESC')
+            .getMany();
+
+        const map = new Map<number, any>();
+
+        for (const m of messages) {
+            const isSender = m.senderId === userId;
+            const peerId = isSender ? m.receiverId : m.senderId;
+
+            if (!map.has(peerId)) {
+                map.set(peerId, {
+                    peerId,
+                    latestMessage: m.content,
+                    time: m.createdAt,
+                    unreadCount: 0,
+                });
+            }
+
+            if (!isSender && !m.isRead) {
+                map.get(peerId).unreadCount++;
+            }
+        }
+
+        const chatList = [];
+        for (const [peerId, data] of map.entries()) {
+            const peerUser = await this.usersService.findById(peerId);
+            if (peerUser) {
+                chatList.push({
+                    peerId: peerId,
+                    peerName: peerUser.name,
+                    peerPhoto: peerUser.profilePhoto1Key,
+                    latestMessage: data.latestMessage,
+                    time: data.time.toISOString(),
+                    unreadCount: data.unreadCount,
+                });
+            }
+        }
+
+        return chatList;
+    }
 }

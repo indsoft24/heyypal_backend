@@ -41,4 +41,11 @@ export class ChatController {
         await this.chatService.markAsRead(Number(userId), Number(peerId));
         return { success: true };
     }
+
+    @Get('list')
+    async getChatList(
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.chatService.getChatList(Number(userId));
+    }
 }
