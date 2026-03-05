@@ -50,7 +50,9 @@ export class ChatService {
                     {
                         type: 'chat',
                         senderId: senderId.toString(),
+                        senderName: sender.name || 'HeyyPal User',
                         messageId: savedMessage.id.toString(),
+                        content: dto.content,
                     },
                 );
             }
