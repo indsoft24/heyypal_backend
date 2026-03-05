@@ -1,15 +1,81 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ExpertProfile, ExpertCategory } from './entities/expert-profile.entity';
 import { User, ExpertStatus, ExpertType } from '../users/entities/user.entity';
+import { ExpertVideo, ExpertVideoStatus } from '../media/entities/expert-video.entity';
+
+export interface ExpertOnboardingStatusDto {
+  onboardingComplete: boolean;
+  hasProfile?: boolean;
+  hasPhotos?: boolean;
+  hasIntroVideo?: boolean;
+  hasDegreeCertificate?: boolean;
+  hasAadhar?: boolean;
+}
 
 @Injectable()
 export class ExpertsService {
   constructor(
     @InjectRepository(ExpertProfile) private expertRepo: Repository<ExpertProfile>,
     @InjectRepository(User) private userRepo: Repository<User>,
-  ) { }
+    @InjectRepository(ExpertVideo) private expertVideoRepo: Repository<ExpertVideo>,
+  ) {}
+
+  /**
+   * Returns whether the expert has completed step 3 (final step): profile with
+   * photos, intro video, and for professional type: degree certificate + aadhar.
+   * Used by the app to gate access; backend is source of truth.
+   */
+  async getOnboardingStatus(userId: number): Promise<ExpertOnboardingStatusDto> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user || user.role !== 'expert') {
+      return { onboardingComplete: true };
+    }
+
+    const profile = await this.expertRepo.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+    if (!profile) {
+      return {
+        onboardingComplete: false,
+        hasProfile: false,
+        hasPhotos: false,
+        hasIntroVideo: false,
+        hasDegreeCertificate: false,
+        hasAadhar: false,
+      };
+    }
+
+    const hasPhotos =
+      (profile.photos?.length ?? 0) >= 2 ||
+      !!(profile.user.profilePhoto1Key && profile.user.profilePhoto2Key);
+
+    const hasIntroVideoFromProfile = !!(
+      profile.introVideoUrl?.trim() || profile.introVideoCompressedUrl?.trim()
+    );
+    const approvedVideo = await this.expertVideoRepo.findOne({
+      where: { userId, status: ExpertVideoStatus.APPROVED },
+    });
+    const hasIntroVideo = !!hasIntroVideoFromProfile || !!approvedVideo;
+
+    const isProfessional = profile.type === ExpertType.PROFESSIONAL;
+    const hasDegreeCertificate = !isProfessional || !!(profile.degreeCertificateUrl?.trim());
+    const hasAadhar = !isProfessional || !!(profile.aadharUrl?.trim());
+
+    const onboardingComplete =
+      hasPhotos && hasIntroVideo && hasDegreeCertificate && hasAadhar;
+
+    return {
+      onboardingComplete,
+      hasProfile: true,
+      hasPhotos,
+      hasIntroVideo,
+      hasDegreeCertificate,
+      hasAadhar,
+    };
+  }
 
   async submitExpertProfile(userId: number, payload: {
     type: ExpertType;
@@ -31,6 +97,30 @@ export class ExpertsService {
       throw new ForbiddenException('Only expert users can submit expert profile');
     }
 
+    // Step 3 validation: photos (min 2), intro video (submitted or already uploaded), and for professional: degree + aadhar
+    if (!payload.photos?.length || payload.photos.length < 2) {
+      throw new BadRequestException('At least 2 photos are required');
+    }
+    const introUrl = payload.introVideoUrl?.trim() || null;
+    const introCompressed = payload.introVideoCompressedUrl?.trim() || introUrl;
+    const hasIntroInPayload = !!(introUrl || introCompressed);
+    const hasUploadedVideo = await this.expertVideoRepo
+      .createQueryBuilder('v')
+      .where('v.user_id = :userId', { userId })
+      .getCount()
+      .then((c) => c > 0);
+    if (!hasIntroInPayload && !hasUploadedVideo) {
+      throw new BadRequestException('Intro video is required. Please record and upload your intro video first.');
+    }
+    if (payload.type === ExpertType.PROFESSIONAL) {
+      if (!payload.degreeCertificateUrl?.trim()) {
+        throw new BadRequestException('Degree/certificate document is required for professional experts');
+      }
+      if (!payload.aadharUrl?.trim()) {
+        throw new BadRequestException('Aadhar document is required for professional experts');
+      }
+    }
+
     // Mirror profile photos into user table so the app can show avatars
     // even for experts (first two images are treated as profile photos).
     if (payload.photos?.length) {
@@ -44,13 +134,13 @@ export class ExpertsService {
     user.expertType = payload.type;
     await this.userRepo.save(user);
 
-    const introUrl = payload.introVideoUrl?.trim() || null;
-    const introCompressed = payload.introVideoCompressedUrl?.trim() || introUrl;
     const profile = this.expertRepo.create({
       user,
       ...payload,
       introVideoUrl: introUrl,
       introVideoCompressedUrl: introCompressed,
+      degreeCertificateUrl: payload.degreeCertificateUrl?.trim() || null,
+      aadharUrl: payload.aadharUrl?.trim() || null,
     });
 
     return this.expertRepo.save(profile);

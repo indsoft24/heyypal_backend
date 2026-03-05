@@ -58,6 +58,16 @@ class SubmitExpertProfileDto {
 export class ExpertsController {
   constructor(private experts: ExpertsService) {}
 
+  @Get('me/onboarding-status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get expert onboarding (step 3) completion status from database; app gates on this',
+  })
+  async getOnboardingStatus(@CurrentUser('userId') userId: string) {
+    return this.experts.getOnboardingStatus(Number(userId));
+  }
+
   @Post('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
