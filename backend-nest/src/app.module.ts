@@ -33,12 +33,20 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),
 
+    MongooseModule.forRootAsync({
+      useFactory: () => ({
+        uri: process.env.MONGO_URI || 'mongodb://localhost:27017/heyypal',
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+      }),
+    }),
+
     CoreModule,
     AuthModule,
     UsersModule,
     // HealthModule,
     AdminModule,
-    // CallModule,
+    CallModule,
     ExpertsModule,
     UploadModule,
     MediaModule,
