@@ -4,6 +4,23 @@ import { Repository } from 'typeorm';
 import { User, UserRole, ExpertStatus } from './entities/user.entity';
 import { EncryptionService } from '../../core/encryption/encryption.service';
 
+/** Same shape as GET /users/me for consistent app session updates. */
+export interface UserMeDto {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  expertStatus: string | null;
+  profileCompleted: boolean;
+}
+
+/** Used to gate app: force Complete Profile screen when not complete. */
+export interface ProfileStatusDto {
+  profileComplete: boolean;
+  missingFields: string[];
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -13,6 +30,40 @@ export class UsersService {
 
   async findById(id: number | string): Promise<User | null> {
     return this.userRepo.findOne({ where: { id: Number(id) } });
+  }
+
+  /** Build response shape for GET /users/me and POST /users/profile/complete. */
+  toMeDto(user: User): UserMeDto {
+    const phone = this.getPhoneDecrypted(user);
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone,
+      role: user.role,
+      expertStatus: user.expertStatus,
+      profileCompleted: user.profileCompleted,
+    };
+  }
+
+  /**
+   * Profile completion status by role. Used after login/register to force
+   * Complete Profile screen when required fields are missing.
+   */
+  async getProfileStatus(userId: number | string): Promise<ProfileStatusDto> {
+    const user = await this.findById(userId);
+    if (!user) {
+      return { profileComplete: false, missingFields: ['account'] };
+    }
+    if (user.profileCompleted) {
+      return { profileComplete: true, missingFields: [] };
+    }
+    const missing: string[] = [];
+    if (!user.name?.trim()) missing.push('name');
+    const phone = this.getPhoneDecrypted(user);
+    if (!phone?.trim()) missing.push('phone');
+    if (!user.role) missing.push('role');
+    return { profileComplete: false, missingFields: missing };
   }
 
   async completeProfile(

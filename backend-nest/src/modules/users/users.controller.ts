@@ -48,16 +48,14 @@ export class UsersController {
   async me(@CurrentUser('userId') userId: string) {
     const user = await this.users.findById(userId);
     if (!user) return null;
-    const phone = this.users.getPhoneDecrypted(user);
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone,
-      role: user.role,
-      expertStatus: user.expertStatus,
-      profileCompleted: user.profileCompleted,
-    };
+    return this.users.toMeDto(user);
+  }
+
+  @Get('me/profile-status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async getProfileStatus(@CurrentUser('userId') userId: string) {
+    return this.users.getProfileStatus(userId);
   }
 
   @Post('profile/complete')
@@ -71,7 +69,7 @@ export class UsersController {
     try {
       const user = await this.users.completeProfile(userId, dto);
       this.logger.log(`profile/complete success userId=${userId}`);
-      return user;
+      return this.users.toMeDto(user);
     } catch (err) {
       this.logger.error(`profile/complete failed userId=${userId}`, (err as Error)?.stack ?? err);
       throw err;
