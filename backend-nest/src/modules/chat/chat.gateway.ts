@@ -80,22 +80,68 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const senderId = Number(user.userId);
       const message = await this.chatService.sendMessage(senderId, dto);
-      this.logger.debug(`Message stored in DB with ID: ${message.id}`);
+      // Send acknowledgment back to sender
+      client.emit('messageSent', message);
 
-      // Send to receiver if online
       const receiverSocketId = this.userSockets.get(dto.receiverId);
       if (receiverSocketId) {
+        // Since receiver is online, we can mark it delivered immediately
+        await this.chatService.markMessageDelivered(message.id);
+        message.isDelivered = true;
         this.logger.debug(`Broadcasting newMessage to receiver ${dto.receiverId} socket ${receiverSocketId}`);
         this.server.to(receiverSocketId).emit('newMessage', message);
       } else {
         this.logger.debug(`Receiver ${dto.receiverId} is offline (socket not registered)`);
       }
 
-      // Send acknowledgment back to sender
-      return { event: 'messageSent', data: message };
+      return { event: 'messageStatusUpdate', data: message };
     } catch (error) {
       this.logger.error(`Error in handleSendMessage: ${error.message}`, error.stack);
       return { event: 'error', data: error.message || 'Internal server error' };
+    }
+  }
+
+  @UseGuards(JwtWsGuard)
+  @SubscribeMessage('markRead')
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { peerId: number },
+  ) {
+    const user = (client as any).user;
+    if (!user || !user.userId) return;
+
+    const userId = Number(user.userId);
+    const peerId = Number(data.peerId);
+
+    this.logger.log(`User ${userId} marked messages from ${peerId} as read`);
+    await this.chatService.markAsRead(userId, peerId);
+
+    // Notify the peer that their messages were read
+    const peerSocketId = this.userSockets.get(peerId);
+    if (peerSocketId) {
+      this.server.to(peerSocketId).emit('messagesRead', { peerId: userId });
+    }
+  }
+
+  @UseGuards(JwtWsGuard)
+  @SubscribeMessage('markDelivered')
+  async handleMarkDelivered(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { peerId: number },
+  ) {
+    const user = (client as any).user;
+    if (!user || !user.userId) return;
+
+    const userId = Number(user.userId);
+    const peerId = Number(data.peerId);
+
+    this.logger.log(`User ${userId} marked messages from ${peerId} as delivered`);
+    await this.chatService.markAsDelivered(userId, peerId);
+
+    // Notify the peer that their messages were delivered
+    const peerSocketId = this.userSockets.get(peerId);
+    if (peerSocketId) {
+      this.server.to(peerSocketId).emit('messagesDelivered', { peerId: userId });
     }
   }
 }

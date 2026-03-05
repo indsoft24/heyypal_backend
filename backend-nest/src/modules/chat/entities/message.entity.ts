@@ -25,6 +25,9 @@ export class Message {
     @Column({ default: false, name: 'is_read' })
     isRead: boolean;
 
+    @Column({ default: false, name: 'is_delivered' })
+    isDelivered: boolean;
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 

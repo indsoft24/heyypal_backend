@@ -80,8 +80,19 @@ export class ChatService {
     async markAsRead(userId: number, peerId: number) {
         await this.messageRepo.update(
             { senderId: peerId, receiverId: userId, isRead: false },
-            { isRead: true },
+            { isRead: true, isDelivered: true },
         );
+    }
+
+    async markAsDelivered(userId: number, peerId: number) {
+        await this.messageRepo.update(
+            { senderId: peerId, receiverId: userId, isDelivered: false },
+            { isDelivered: true },
+        );
+    }
+
+    async markMessageDelivered(messageId: number) {
+        await this.messageRepo.update(messageId, { isDelivered: true });
     }
 
     async getChatList(userId: number) {
