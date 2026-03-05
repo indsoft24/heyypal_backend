@@ -40,7 +40,7 @@ class CompleteProfileDto {
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 
-  constructor(private users: UsersService) {}
+  constructor(private users: UsersService) { }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -74,5 +74,19 @@ export class UsersController {
       this.logger.error(`profile/complete failed userId=${userId}`, (err as Error)?.stack ?? err);
       throw err;
     }
+  }
+
+  @Post('fcm-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async updateFcmToken(
+    @CurrentUser('userId') userId: string,
+    @Body('token') token: string,
+  ) {
+    if (!token) {
+      return { success: false, message: 'Token is required' };
+    }
+    await this.users.updateFcmToken(Number(userId), token);
+    return { success: true };
   }
 }

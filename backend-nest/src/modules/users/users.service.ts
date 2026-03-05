@@ -26,7 +26,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
     private encryption: EncryptionService,
-  ) {}
+  ) { }
 
   async findById(id: number | string): Promise<User | null> {
     return this.userRepo.findOne({ where: { id: Number(id) } });
@@ -91,5 +91,9 @@ export class UsersService {
 
   getPhoneDecrypted(user: User): string | null {
     return user.phoneEnc ? this.encryption.decrypt(user.phoneEnc) : null;
+  }
+
+  async updateFcmToken(userId: number, token: string): Promise<void> {
+    await this.userRepo.update(userId, { fcmToken: token });
   }
 }

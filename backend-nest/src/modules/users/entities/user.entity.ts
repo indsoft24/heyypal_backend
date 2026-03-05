@@ -73,6 +73,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'profile_photo_2_key' })
   profilePhoto2Key: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'fcm_token' })
+  fcmToken: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

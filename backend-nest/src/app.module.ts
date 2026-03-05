@@ -14,6 +14,9 @@ import { CallModule } from './modules/call/call.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { MediaModule } from './modules/media/media.module';
 import { AgoraModule } from './modules/agora/agora.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { NotificationsService } from './modules/notifications/notifications.service';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -42,8 +45,10 @@ import { AgoraModule } from './modules/agora/agora.module';
     UploadModule,
     MediaModule,
     AgoraModule,
+    ChatModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, NotificationsService],
 })
 export class AppModule {}
