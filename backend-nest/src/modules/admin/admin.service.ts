@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { AdminUser, AdminRole } from './entities/admin-user.entity';
 import { User, UserRole, ExpertStatus } from '../users/entities/user.entity';
 import { ExpertProfile } from '../experts/entities/expert-profile.entity';
+import { ExpertVideoService } from '../media/expert-video.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class AdminService implements OnModuleInit {
     @InjectRepository(AdminUser) private adminRepo: Repository<AdminUser>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(ExpertProfile) private expertRepo: Repository<ExpertProfile>,
+    private expertVideoService: ExpertVideoService,
     private jwt: JwtService,
     private config: ConfigService,
   ) {}
@@ -60,34 +62,39 @@ export class AdminService implements OnModuleInit {
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
+    const approvedVideoUrls = await this.expertVideoService.getApprovedVideoUrlsByUser();
     return {
-      experts: experts.map((ex) => ({
-        id: ex.user.id,
-        google_id: ex.user.googleId,
-        name: ex.user.name,
-        email: ex.user.email,
-        phone: null,
-        role: ex.user.role,
-        expert_status: ex.user.expertStatus,
-        expert_type: ex.user.expertType,
-        gender: ex.user.gender,
-        date_of_birth: ex.user.dateOfBirth,
-        created_at: ex.user.createdAt,
-        profile: {
-          id: ex.id,
-          type: ex.type,
-          category: ex.category,
-          bio: ex.bio,
-          languages_spoken: ex.languagesSpoken,
-          photos: ex.photos,
-          intro_video_url: ex.introVideoUrl,
-          intro_video_compressed_url: ex.introVideoCompressedUrl,
-          degree_certificate_url: ex.degreeCertificateUrl,
-          aadhar_url: ex.aadharUrl,
-          created_at: ex.createdAt,
-          updated_at: ex.updatedAt,
-        },
-      })),
+      experts: experts.map((ex) => {
+        const introUrl = ex.introVideoUrl ?? approvedVideoUrls.get(ex.user.id) ?? null;
+        const introCompressed = ex.introVideoCompressedUrl ?? introUrl;
+        return {
+          id: ex.user.id,
+          google_id: ex.user.googleId,
+          name: ex.user.name,
+          email: ex.user.email,
+          phone: null,
+          role: ex.user.role,
+          expert_status: ex.user.expertStatus,
+          expert_type: ex.user.expertType,
+          gender: ex.user.gender,
+          date_of_birth: ex.user.dateOfBirth,
+          created_at: ex.user.createdAt,
+          profile: {
+            id: ex.id,
+            type: ex.type,
+            category: ex.category,
+            bio: ex.bio,
+            languages_spoken: ex.languagesSpoken,
+            photos: ex.photos,
+            intro_video_url: introUrl,
+            intro_video_compressed_url: introCompressed,
+            degree_certificate_url: ex.degreeCertificateUrl,
+            aadhar_url: ex.aadharUrl,
+            created_at: ex.createdAt,
+            updated_at: ex.updatedAt,
+          },
+        };
+      }),
     };
   }
 

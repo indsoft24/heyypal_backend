@@ -42,6 +42,20 @@ CREATE TABLE IF NOT EXISTS expert_profiles (
 
 CREATE INDEX IF NOT EXISTS idx_expert_profiles_user_id ON expert_profiles (user_id);
 
+-- Expert intro videos (uploaded by experts, admin approves)
+CREATE TABLE IF NOT EXISTS expert_videos (
+  id UUID PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  video_key VARCHAR(255) NOT NULL,
+  thumbnail_key VARCHAR(255) DEFAULT NULL,
+  duration INTEGER NOT NULL DEFAULT 0,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  approved_at TIMESTAMPTZ DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_expert_videos_user_id ON expert_videos (user_id);
+CREATE INDEX IF NOT EXISTS idx_expert_videos_status ON expert_videos (status);
+
 CREATE TABLE IF NOT EXISTS admin_users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,

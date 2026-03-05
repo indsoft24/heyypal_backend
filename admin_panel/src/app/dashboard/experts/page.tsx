@@ -35,20 +35,42 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-function ExpandedRow({ ex, onApprove, onReject, actioning }: {
+/** Portrait-style video container (9:16 aspect), compact height. */
+function PortraitVideo({ src, className = '' }: { src: string; className?: string }) {
+  return (
+    <div className={`w-[120px] aspect-[9/16] rounded-lg border border-slate-200 overflow-hidden bg-black shrink-0 ${className}`}>
+      <video
+        src={src}
+        controls
+        className="w-full h-full object-contain"
+        preload="metadata"
+      />
+    </div>
+  );
+}
+
+function ExpandedRow({
+  ex,
+  pendingVideo,
+  onApprove,
+  onReject,
+  actioning,
+}: {
   ex: Expert;
-  onApprove: () => void;
-  onReject: () => void;
+  pendingVideo: PendingExpertVideo | null;
+  onApprove: () => void | Promise<void>;
+  onReject: () => void | Promise<void>;
   actioning: boolean;
 }) {
   const hasPhotos = ex.profile?.photos && ex.profile.photos.length > 0;
-  const hasVideo = ex.profile?.intro_video_compressed_url || ex.profile?.intro_video_url;
+  const approvedVideoUrl = ex.profile?.intro_video_compressed_url || ex.profile?.intro_video_url;
   const hasDocs = ex.expert_type === 'professional' && (ex.profile?.degree_certificate_url || ex.profile?.aadhar_url);
+  const showActions = ex.expert_status === 'pending' || pendingVideo;
 
   return (
     <tr>
-      <td colSpan={7} className="bg-slate-50 px-6 py-5 border-b border-slate-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <td colSpan={7} className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* User Details */}
           <div>
@@ -79,89 +101,95 @@ function ExpandedRow({ ex, onApprove, onReject, actioning }: {
             </table>
           </div>
 
-          {/* Media & Documents */}
-          <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">Media & Documents</p>
+          {/* Media & Documents + Intro Video (same card: photos/docs left, video portrait right) */}
+          <div className="md:col-span-1 flex flex-col md:flex-row md:items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">Media & Documents</p>
 
-            {hasPhotos && (
-              <div className="mb-3">
-                <p className="text-xs font-medium text-slate-500 mb-1.5">Professional Photos</p>
-                <div className="flex flex-wrap gap-2">
-                  {ex.profile!.photos!.map((url, i) => (
-                    <a
-                      key={i}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:ring-2 hover:ring-indigo-400 transition"
-                    >
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                    </a>
-                  ))}
+              {hasPhotos && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-slate-500 mb-1.5">Professional Photos</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ex.profile!.photos!.map((url, i) => (
+                      <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:ring-2 hover:ring-indigo-400 transition"
+                      >
+                        <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {hasVideo && (
-              <div className="mb-3">
-                <p className="text-xs font-medium text-slate-500 mb-1.5">Intro Video</p>
-                <video
-                  src={ex.profile!.intro_video_compressed_url || ex.profile!.intro_video_url || ''}
-                  controls
-                  className="max-w-full rounded-lg border border-slate-200 max-h-40"
-                  preload="metadata"
-                />
-              </div>
-            )}
-
-            {hasDocs && (
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-1.5">Documents</p>
-                <div className="flex flex-wrap gap-2">
-                  {ex.profile?.degree_certificate_url && (
-                    <a
-                      href={ex.profile.degree_certificate_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
-                    >
-                      📄 Degree / Certificate
-                    </a>
-                  )}
-                  {ex.profile?.aadhar_url && (
-                    <a
-                      href={ex.profile.aadhar_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
-                    >
-                      🪪 Aadhaar
-                    </a>
-                  )}
+              {hasDocs && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-1.5">Documents</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ex.profile?.degree_certificate_url && (
+                      <a
+                        href={ex.profile.degree_certificate_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                      >
+                        📄 Degree / Certificate
+                      </a>
+                    )}
+                    {ex.profile?.aadhar_url && (
+                      <a
+                        href={ex.profile.aadhar_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                      >
+                        🪪 Aadhaar
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {!hasPhotos && !hasVideo && !hasDocs && (
-              <p className="text-xs text-slate-400">No media or documents uploaded.</p>
-            )}
+              {!hasPhotos && !hasDocs && !pendingVideo && !approvedVideoUrl && (
+                <p className="text-xs text-slate-400">No media or documents uploaded.</p>
+              )}
+            </div>
+
+            {/* Intro Video — always show: pending, approved, or empty state */}
+            <div className="shrink-0">
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                {pendingVideo ? 'Intro Video (pending)' : approvedVideoUrl ? 'Intro Video' : 'Intro Video'}
+              </p>
+              {pendingVideo ? (
+                <PortraitVideo src={pendingVideo.videoUrl} />
+              ) : approvedVideoUrl ? (
+                <PortraitVideo src={approvedVideoUrl} />
+              ) : (
+                <div className="w-[120px] aspect-[9/16] rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center">
+                  <span className="text-[10px] text-slate-400 text-center px-1">No intro video</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        {ex.expert_status === 'pending' && (
-          <div className="mt-5 flex justify-end gap-2 pt-4 border-t border-slate-200">
+        {/* Single set of action buttons (expert + pending video handled together) */}
+        {showActions && (
+          <div className="mt-4 flex justify-end gap-2 pt-3 border-t border-slate-200">
             <button
               onClick={onReject}
               disabled={actioning}
-              className="rounded-lg border border-red-500 px-4 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
+              className="rounded-lg border border-red-500 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
             >
               Reject
             </button>
             <button
               onClick={onApprove}
               disabled={actioning}
-              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition"
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition"
             >
               Approve
             </button>
@@ -172,134 +200,11 @@ function ExpandedRow({ ex, onApprove, onReject, actioning }: {
   );
 }
 
-// ── Pending Intro Videos section ─────────────────────────────────────────────
-function PendingVideosSection() {
-  const router = useRouter();
-  const [videos, setVideos] = useState<PendingExpertVideo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actioning, setActioning] = useState<string | null>(null);
-  const [error, setError] = useState('');
-
-  async function load() {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await adminApi.getPendingExpertVideos();
-      setVideos(Array.isArray(data) ? data : []);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to load';
-      setError(msg);
-      if (msg.includes('Unauthorized') || msg.includes('401')) {
-        clearToken();
-        router.replace('/login');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { if (getToken()) load(); else setLoading(false); }, []);
-
-  async function approve(id: string) {
-    setActioning(id);
-    try { await adminApi.approveExpertVideo(id); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Failed to approve'); }
-    finally { setActioning(null); }
-  }
-
-  async function reject(id: string) {
-    setActioning(id);
-    try { await adminApi.rejectExpertVideo(id); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Failed to reject'); }
-    finally { setActioning(null); }
-  }
-
-  return (
-    <section className="mt-10">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800">Pending Intro Videos</h2>
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 ring-1 ring-amber-200">
-          {loading ? '…' : videos.length} pending
-        </span>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center gap-2 text-slate-500 py-8">
-          <svg className="animate-spin h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          <span className="text-sm">Loading videos…</span>
-        </div>
-      ) : videos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-400">
-          <p className="text-base font-medium mb-1">No pending intro videos</p>
-          <p className="text-sm">New video submissions will appear here.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {videos.map((v) => (
-            <div
-              key={v.id}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col"
-            >
-              {/* Header */}
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{v.user?.name ?? 'Unknown'}</p>
-                  <p className="text-xs text-slate-500 truncate">{v.user?.email}</p>
-                  <div className="mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-slate-400">Duration: {v.duration}s</span>
-                    <StatusBadge status={v.status} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Video */}
-              <div className="p-4 flex-1 flex flex-col gap-3">
-                <video
-                  src={v.videoUrl}
-                  controls
-                  className="w-full rounded-lg border border-slate-200 max-h-48 object-cover bg-black"
-                  preload="metadata"
-                >
-                  Your browser does not support the video tag.
-                </video>
-
-                {/* Action buttons */}
-                <div className="flex gap-2 justify-end mt-auto">
-                  <button
-                    onClick={() => reject(v.id)}
-                    disabled={actioning !== null}
-                    className="rounded-lg border border-red-500 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => approve(v.id)}
-                    disabled={actioning !== null}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition"
-                  >
-                    Approve
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ExpertsPage() {
   const router = useRouter();
   const [experts, setExperts] = useState<Expert[]>([]);
+  const [pendingVideos, setPendingVideos] = useState<PendingExpertVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actioning, setActioning] = useState<number | null>(null);
@@ -310,8 +215,12 @@ export default function ExpertsPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await adminApi.getExperts();
-      setExperts(data.experts);
+      const [expertsRes, videosRes] = await Promise.all([
+        adminApi.getExperts(),
+        adminApi.getPendingExpertVideos().catch(() => []),
+      ]);
+      setExperts(expertsRes.experts);
+      setPendingVideos(Array.isArray(videosRes) ? videosRes : []);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load';
       setError(msg);
@@ -329,18 +238,40 @@ export default function ExpertsPage() {
     else setLoading(false);
   }, []);
 
-  async function approve(id: number) {
-    setActioning(id);
-    try { await adminApi.approveExpert(id); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Failed to approve'); }
-    finally { setActioning(null); }
+  const pendingByUserId = new Map<number, PendingExpertVideo>();
+  for (const v of pendingVideos) {
+    const uid = v.userId ?? (v as { user_id?: number }).user_id ?? v.user?.id;
+    if (uid != null && !pendingByUserId.has(uid)) pendingByUserId.set(uid, v);
   }
 
-  async function reject(id: number) {
-    setActioning(id);
-    try { await adminApi.rejectExpert(id); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Failed to reject'); }
-    finally { setActioning(null); }
+  /** Single approve: if expert has a pending intro video, approve video first then expert. */
+  async function handleApprove(ex: Expert): Promise<void> {
+    setActioning(ex.id);
+    try {
+      const pending = pendingByUserId.get(ex.id);
+      if (pending) await adminApi.approveExpertVideo(pending.id);
+      await adminApi.approveExpert(ex.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve');
+    } finally {
+      setActioning(null);
+    }
+  }
+
+  /** Single reject: if expert has a pending intro video, reject video first then expert. */
+  async function handleReject(ex: Expert): Promise<void> {
+    setActioning(ex.id);
+    try {
+      const pending = pendingByUserId.get(ex.id);
+      if (pending) await adminApi.rejectExpertVideo(pending.id);
+      await adminApi.rejectExpert(ex.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reject');
+    } finally {
+      setActioning(null);
+    }
   }
 
   if (loading) {
@@ -389,7 +320,7 @@ export default function ExpertsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {experts.map((ex) => {
+              {experts.map((ex: Expert) => {
                 const isExpanded = expanded === ex.id;
                 return (
                   <Fragment key={ex.id}>
@@ -450,8 +381,9 @@ export default function ExpertsPage() {
                       <ExpandedRow
                         key={`${ex.id}-detail`}
                         ex={ex}
-                        onApprove={() => approve(ex.id)}
-                        onReject={() => reject(ex.id)}
+                        pendingVideo={pendingByUserId.get(ex.id) ?? null}
+                        onApprove={() => handleApprove(ex)}
+                        onReject={() => handleReject(ex)}
                         actioning={actioning === ex.id}
                       />
                     )}
@@ -463,8 +395,6 @@ export default function ExpertsPage() {
         </div>
       )}
 
-      {/* ── Pending Intro Videos (merged) ── */}
-      <PendingVideosSection />
     </div>
   );
 }
