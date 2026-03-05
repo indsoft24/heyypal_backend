@@ -23,6 +23,9 @@ export const ALLOWED_KEY_PREFIXES = [
   'profile/user/',
   'profile/expert/',
   'expert/',
+  'expert-photos/',
+  'expert-videos/',
+  'expert-documents/',
 ];
 
 export function isAllowedKey(key: string): boolean {
