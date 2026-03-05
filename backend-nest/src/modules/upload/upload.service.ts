@@ -12,6 +12,7 @@ const DOCUMENT_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const IMAGE_MIMES = new Set([
   'image/jpeg',
+  'image/jpg', // some clients send image/jpg
   'image/png',
   'image/gif',
   'image/webp',
@@ -27,6 +28,7 @@ const DOCUMENT_MIMES = new Set([
 
 const EXT_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
   'image/png': 'png',
   'image/gif': 'gif',
   'image/webp': 'webp',
@@ -52,7 +54,8 @@ export class UploadService {
   }
 
   private getExt(mimetype: string): string {
-    return EXT_BY_MIME[mimetype] || 'bin';
+    const mime = (mimetype || '').toLowerCase().split(';')[0].trim();
+    return EXT_BY_MIME[mime] || 'bin';
   }
 
   private async ensureDir(dirPath: string): Promise<void> {
@@ -92,7 +95,8 @@ export class UploadService {
           `Photo exceeds ${PHOTO_MAX_SIZE / 1024 / 1024} MB limit`,
         );
       }
-      if (!IMAGE_MIMES.has(f.mimetype)) {
+      const mime = (f.mimetype || '').toLowerCase().split(';')[0].trim();
+      if (!IMAGE_MIMES.has(mime)) {
         throw new BadRequestException(
           `Invalid photo type: ${f.mimetype}. Use JPEG, PNG, GIF, or WebP`,
         );
@@ -100,7 +104,8 @@ export class UploadService {
     }
     const urls: string[] = [];
     for (const f of files) {
-      const rel = await this.saveFile('expert-photos', f.buffer, f.mimetype);
+      const mime = (f.mimetype || '').toLowerCase().split(';')[0].trim();
+    const rel = await this.saveFile('expert-photos', f.buffer, mime);
       urls.push(this.getPublicUrl(rel));
     }
     return urls;
