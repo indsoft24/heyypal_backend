@@ -34,13 +34,14 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     }),
 
     MongooseModule.forRootAsync({
-      useFactory: () => ({
-        uri: process.env.MONGO_URI || 'mongodb://localhost:27017/heyypal',
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGO_URI') || 'mongodb://localhost:27017/heyypal',
+        dbName: 'heyypal',
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 5000,
       }),
     }),
-
     CoreModule,
     AuthModule,
     UsersModule,
