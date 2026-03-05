@@ -33,10 +33,15 @@ export class AuthService {
   async validateGoogleToken(idToken: string): Promise<{ sub: string; email: string; name?: string }> {
     const audiences = this.getGoogleAudiences();
     if (audiences.length === 0) throw new UnauthorizedException('Google Sign-In not configured (GOOGLE_CLIENT_ID)');
-    const ticket = await this.googleClient.verifyIdToken({ idToken, audience: audiences });
-    const payload = ticket.getPayload();
-    if (!payload?.sub || !payload?.email) throw new UnauthorizedException('Invalid Google token');
-    return { sub: payload.sub, email: payload.email, name: payload.name };
+
+    try {
+      const ticket = await this.googleClient.verifyIdToken({ idToken, audience: audiences });
+      const payload = ticket.getPayload();
+      if (!payload?.sub || !payload?.email) throw new UnauthorizedException('Invalid Google token');
+      return { sub: payload.sub, email: payload.email, name: payload.name };
+    } catch (error) {
+      throw new UnauthorizedException(`Google login failed: ${error.message}`);
+    }
   }
 
   async loginWithGoogle(idToken: string) {

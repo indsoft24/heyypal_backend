@@ -56,12 +56,17 @@ export class AuthController {
   constructor(
     private auth: AuthService,
     private users: UsersService,
-  ) {}
+  ) { }
 
   @Post('google')
   @ApiOperation({ summary: 'Login with Google ID token' })
   async google(@Body() dto: GoogleLoginDto) {
-    return this.auth.loginWithGoogle(dto.idToken);
+    try {
+      return await this.auth.loginWithGoogle(dto.idToken);
+    } catch (e) {
+      this.logger.error(`Google login exception: ${e.message}`, e.stack);
+      throw e;
+    }
   }
 
   @Post('refresh')
