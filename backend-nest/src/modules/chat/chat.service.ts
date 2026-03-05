@@ -62,7 +62,7 @@ export class ChatService {
     }
 
     async getMessages(userId: number, peerId: number, limit = 50, offset = 0) {
-        return this.messageRepo.find({
+        const [data, total] = await this.messageRepo.findAndCount({
             where: [
                 { senderId: userId, receiverId: peerId },
                 { senderId: peerId, receiverId: userId },
@@ -72,6 +72,7 @@ export class ChatService {
             skip: offset,
             relations: ['sender', 'receiver'],
         });
+        return { data, total };
     }
 
     async markAsRead(userId: number, peerId: number) {
