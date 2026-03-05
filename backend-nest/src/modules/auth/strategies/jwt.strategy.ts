@@ -13,8 +13,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  validate(payload: { sub: string; email: string; role: string }) {
-    if (!payload.sub) throw new UnauthorizedException();
-    return { userId: payload.sub, email: payload.email, role: payload.role };
+  validate(payload: { sub: string | number; email?: string; role?: string }) {
+    if (payload.sub === undefined || payload.sub === null) throw new UnauthorizedException();
+    const userId = typeof payload.sub === 'number' ? String(payload.sub) : payload.sub;
+    return { userId, email: payload.email, role: payload.role };
   }
 }

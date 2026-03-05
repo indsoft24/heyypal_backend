@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { IoAdapter } from '@nestjs/platform-socket.io';
+import { SocketIoAdapter } from './socket-io.adapter';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
@@ -11,7 +11,7 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.useWebSocketAdapter(new IoAdapter(app));
+  app.useWebSocketAdapter(new SocketIoAdapter(app));
   app.setGlobalPrefix('api');
 
   const uploadDir =

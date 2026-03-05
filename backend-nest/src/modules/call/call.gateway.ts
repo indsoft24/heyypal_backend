@@ -25,8 +25,9 @@ interface AuthenticatedSocket extends Socket {
 }
 
 @WebSocketGateway({
-  cors: { origin: true },
+  cors: { origin: true, credentials: true },
   namespace: '/call',
+  transports: ['websocket', 'polling'],
 })
 export class CallGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -48,8 +49,9 @@ export class CallGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: AuthenticatedSocket) {
     const token =
       client.handshake.auth?.token ||
-      client.handshake.headers?.authorization?.replace('Bearer ', '');
+      client.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
     if (!token) {
+      this.logger.warn(`Socket connection rejected: no token (socket=${client.id})`);
       client.disconnect();
       return;
     }
@@ -57,16 +59,19 @@ export class CallGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const payload = this.jwtService.verify(token, {
         secret: this.config.get<string>('JWT_SECRET') || 'change-me',
       });
-      const userId = parseInt(payload.sub, 10);
+      const rawSub = payload.sub;
+      const userId = typeof rawSub === 'number' ? rawSub : parseInt(String(rawSub), 10);
       if (Number.isNaN(userId)) {
+        this.logger.warn(`Socket connection rejected: invalid sub (socket=${client.id})`);
         client.disconnect();
         return;
       }
       client.data.userId = String(userId);
       if (!this.userSockets.has(userId)) this.userSockets.set(userId, new Set());
       this.userSockets.get(userId)!.add(client.id);
-      this.logger.debug(`Socket connected: user=${userId} socket=${client.id}`);
-    } catch {
+      this.logger.log(`Socket connected: user=${userId} socket=${client.id} transport=${client.conn.transport.name}`);
+    } catch (err) {
+      this.logger.warn(`Socket auth failed: ${(err as Error).message} (socket=${client.id})`);
       client.disconnect();
     }
   }
@@ -79,6 +84,7 @@ export class CallGateway implements OnGatewayConnection, OnGatewayDisconnect {
         set.delete(client.id);
         if (set.size === 0) this.userSockets.delete(parseInt(userId, 10));
       }
+      this.logger.log(`Socket disconnected: user=${userId} socket=${client.id}`);
     }
   }
 
