@@ -30,13 +30,13 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true, name: 'google_id' })
+  @Column({ unique: true, name: 'google_id', nullable: true })
   googleId: string;
 
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   email: string;
 
   /** Encrypted at rest (PII); DB column: phone */

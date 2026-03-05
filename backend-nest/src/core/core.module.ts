@@ -12,17 +12,17 @@ import { StorageModule } from './storage/storage.module';
     RedisModule,
     EncryptionModule,
     RabbitMQModule,
-    LoggingModule,
-    AuditModule,
+    // LoggingModule,
+    // AuditModule,
     StorageModule,
   ],
   exports: [
     RedisModule,
     EncryptionModule,
     RabbitMQModule,
-    LoggingModule,
-    AuditModule,
+    // LoggingModule,
+    // AuditModule,
     StorageModule,
   ],
 })
-export class CoreModule {}
+export class CoreModule { }

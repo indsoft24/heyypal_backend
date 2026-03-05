@@ -20,10 +20,10 @@ export class RefreshToken {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'token_hash' })
+  @Column({ name: 'token_hash', nullable: true })
   tokenHash: string;
 
-  @Column({ name: 'expires_at' })
+  @Column({ name: 'expires_at', nullable: true })
   expiresAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })

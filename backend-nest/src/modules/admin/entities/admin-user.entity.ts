@@ -16,16 +16,16 @@ export class AdminUser {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   email: string;
 
-  @Column({ name: 'password_hash' })
+  @Column({ name: 'password_hash', nullable: true })
   passwordHash: string;
 
-  @Column({ type: 'enum', enum: AdminRole })
+  @Column({ type: 'enum', enum: AdminRole, nullable: true })
   role: AdminRole;
 
   @CreateDateColumn({ name: 'created_at' })

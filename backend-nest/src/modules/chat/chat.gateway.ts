@@ -70,7 +70,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: SendMessageDto,
   ) {
     const user = (client as any).user;
-    if (!user || !user.userId) return;
+    if (!user || !user.userId) {
+      this.logger.warn(`Unauthorized sendMessage attempt from ${client.id}`);
+      return { event: 'error', data: 'Unauthorized' };
+    }
+
+    this.logger.log(`Incoming message from ${user.userId} to ${dto.receiverId}`);
 
     try {
       const senderId = Number(user.userId);
@@ -79,14 +84,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Send to receiver if online
       const receiverSocketId = this.userSockets.get(dto.receiverId);
       if (receiverSocketId) {
+        this.logger.debug(`Broadcasting to receiver ${dto.receiverId} socket ${receiverSocketId}`);
         this.server.to(receiverSocketId).emit('newMessage', message);
+      } else {
+        this.logger.debug(`Receiver ${dto.receiverId} is offline, notification already sent by service`);
       }
 
       // Send acknowledgment back to sender
       return { event: 'messageSent', data: message };
     } catch (error) {
-      this.logger.error(`Error sending message: ${error.message}`);
-      return { event: 'error', data: error.message };
+      this.logger.error(`Error in handleSendMessage: ${error.message}`, error.stack);
+      return { event: 'error', data: error.message || 'Internal server error' };
     }
   }
 }

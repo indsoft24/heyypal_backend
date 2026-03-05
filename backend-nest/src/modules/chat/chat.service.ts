@@ -18,40 +18,47 @@ export class ChatService {
     ) { }
 
     async sendMessage(senderId: number, dto: SendMessageDto) {
-        const receiver = await this.usersService.findById(dto.receiverId);
-        if (!receiver) {
-            this.logger.warn(`Receiver ${dto.receiverId} not found`);
-            throw new Error('Receiver not found');
+        this.logger.debug(`sendMessage: senderId=${senderId}, receiverId=${dto.receiverId}, contentLen=${dto.content.length}`);
+
+        try {
+            const receiver = await this.usersService.findById(dto.receiverId);
+            if (!receiver) {
+                this.logger.warn(`Receiver ${dto.receiverId} not found`);
+                throw new Error('Receiver not found');
+            }
+
+            const sender = await this.usersService.findById(senderId);
+            if (!sender) {
+                this.logger.warn(`Sender ${senderId} not found`);
+                throw new Error('Sender not found');
+            }
+
+            const message = this.messageRepo.create({
+                senderId,
+                receiverId: dto.receiverId,
+                content: dto.content,
+            });
+
+            const savedMessage = await this.messageRepo.save(message);
+            this.logger.log(`Message stored: id=${savedMessage.id}, sender=${senderId}, receiver=${dto.receiverId}`);
+
+            if (receiver.fcmToken) {
+                await this.notificationsService.sendPushNotification(
+                    receiver.fcmToken,
+                    sender.name || 'HeyyPal User',
+                    dto.content,
+                    {
+                        type: 'chat',
+                        senderId: senderId.toString(),
+                        messageId: savedMessage.id.toString(),
+                    },
+                );
+            }
+            return savedMessage;
+        } catch (error) {
+            this.logger.error(`Failed to send/store message: ${error.message}`, error.stack);
+            throw error;
         }
-
-        const sender = await this.usersService.findById(senderId);
-        if (!sender) {
-            this.logger.warn(`Sender ${senderId} not found`);
-            throw new Error('Sender not found');
-        }
-
-        const message = this.messageRepo.create({
-            senderId,
-            receiverId: dto.receiverId,
-            content: dto.content,
-        });
-
-        const savedMessage = await this.messageRepo.save(message);
-
-        if (receiver.fcmToken) {
-            await this.notificationsService.sendPushNotification(
-                receiver.fcmToken,
-                sender.name || 'HeyyPal User',
-                dto.content,
-                {
-                    type: 'chat',
-                    senderId: senderId.toString(),
-                    messageId: savedMessage.id.toString(),
-                },
-            );
-        }
-
-        return savedMessage;
     }
 
     async getMessages(userId: number, peerId: number, limit = 50, offset = 0) {

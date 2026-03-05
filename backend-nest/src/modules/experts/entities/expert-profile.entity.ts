@@ -30,16 +30,16 @@ export class ExpertProfile {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ type: 'enum', enum: ExpertType })
+  @Column({ type: 'enum', enum: ExpertType, nullable: true })
   type: ExpertType;
 
-  @Column({ type: 'enum', enum: ExpertCategory })
+  @Column({ type: 'enum', enum: ExpertCategory, nullable: true })
   category: ExpertCategory;
 
-  @Column({ type: 'varchar', length: 300 })
+  @Column({ type: 'varchar', length: 300, nullable: true })
   bio: string;
 
-  @Column({ type: 'simple-array', name: 'languages_spoken' })
+  @Column({ type: 'simple-array', name: 'languages_spoken', nullable: true })
   languagesSpoken: string[];
 
   @Column({ type: 'simple-array', name: 'photos', nullable: true })

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
@@ -32,15 +32,13 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       synchronize: process.env.NODE_ENV !== 'production',
       ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/heyypal', {
-      dbName: 'heyypal',
-    }),
+
     CoreModule,
     AuthModule,
     UsersModule,
-    HealthModule,
+    // HealthModule,
     AdminModule,
-    CallModule,
+    // CallModule,
     ExpertsModule,
     UploadModule,
     MediaModule,
@@ -51,4 +49,4 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
   controllers: [AppController],
   providers: [AppService, NotificationsService],
 })
-export class AppModule {}
+export class AppModule { }
