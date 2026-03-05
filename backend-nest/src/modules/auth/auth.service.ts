@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,6 +11,7 @@ import { UserRole, ExpertStatus } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private googleClient: OAuth2Client;
 
   constructor(
@@ -40,7 +41,9 @@ export class AuthService {
       if (!payload?.sub || !payload?.email) throw new UnauthorizedException('Invalid Google token');
       return { sub: payload.sub, email: payload.email, name: payload.name };
     } catch (error) {
-      throw new UnauthorizedException(`Google login failed: ${error.message}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Google token verification failed: ${msg}`);
+      throw new UnauthorizedException(`Google login failed: ${msg}`);
     }
   }
 
@@ -52,10 +55,24 @@ export class AuthService {
         googleId: payload.sub,
         email: payload.email,
         name: payload.name ?? payload.email,
+        role: UserRole.USER,
+        expertStatus: null,
+        expertType: null,
+        profileCompleted: false,
       });
-      await this.userRepo.save(user);
+      try {
+        await this.userRepo.save(user);
+      } catch (err) {
+        this.logger.error(`User save failed on Google sign-up: ${(err as Error)?.message}`, (err as Error)?.stack);
+        throw new InternalServerErrorException('Sign-up failed. Please try again.');
+      }
     }
-    return this.issueTokens(user);
+    try {
+      return await this.issueTokens(user);
+    } catch (err) {
+      this.logger.error(`issueTokens failed: ${(err as Error)?.message}`, (err as Error)?.stack);
+      throw new InternalServerErrorException('Login failed. Please try again.');
+    }
   }
 
   async issueTokens(user: User) {

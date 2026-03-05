@@ -24,6 +24,9 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS profile_photo_1_key VARCHAR(255) DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS profile_photo_2_key VARCHAR(255) DEFAULT NULL;
 
+-- FCM token for push notifications (required by User entity; add on existing DBs if Google login 500s)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(255) DEFAULT NULL;
+
 CREATE TABLE IF NOT EXISTS expert_profiles (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
