@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, UseGuards, NotFoundException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -47,7 +47,7 @@ export class UsersController {
   @ApiBearerAuth()
   async me(@CurrentUser('userId') userId: string) {
     const user = await this.users.findById(userId);
-    if (!user) return null;
+    if (!user) throw new NotFoundException('User not found');
     return this.users.toMeDto(user);
   }
 
