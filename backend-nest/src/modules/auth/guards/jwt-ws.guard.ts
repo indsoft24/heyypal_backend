@@ -8,17 +8,23 @@ export class JwtWsGuard extends AuthGuard('jwt') {
     private readonly logger = new Logger(JwtWsGuard.name);
 
     getRequest(context: ExecutionContext) {
-        // Return the handhshake request so passport can extract the token
         const client = context.switchToWs().getClient<Socket>();
 
-        // Some implementations send the token in auth object
+        // Try extracting token from:
+        // 1. Handshake headers (standard)
+        // 2. Handshake auth (Socket.IO 3+)
+        // 3. Handshake query (Socket.IO 2 backward compat)
         const authHeaders = client.handshake.headers.authorization;
         const authPayload = client.handshake.auth?.token;
+        const queryToken = client.handshake.query?.token;
 
-        // Create a mock HTTP Request object that passport-jwt can use
+        const token = authHeaders ||
+            (authPayload ? `Bearer ${authPayload}` : null) ||
+            (queryToken ? `Bearer ${queryToken}` : null);
+
         return {
             headers: {
-                authorization: authHeaders || `Bearer ${authPayload}`,
+                authorization: token,
             },
         };
     }
