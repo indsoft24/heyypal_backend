@@ -91,6 +91,36 @@ export class ExpertsService {
     };
   }
 
+  /**
+   * Detailed public expert view for profile screen (by user id).
+   */
+  async getExpertPublicProfile(userId: number) {
+    const ex = await this.expertRepo.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+    if (!ex || ex.user.expertStatus !== ExpertStatus.APPROVED) {
+      throw new NotFoundException('Expert not found');
+    }
+    const photos = ex.photos ?? [];
+    const profilePhoto1Key = ex.user.profilePhoto1Key ?? photos[0] ?? null;
+    const profilePhoto2Key = ex.user.profilePhoto2Key ?? photos[1] ?? null;
+    return {
+      id: ex.user.id,
+      name: ex.user.name,
+      category: ex.category,
+      bio: ex.bio,
+      languages: ex.languagesSpoken,
+      profile_photo_1_key: profilePhoto1Key,
+      profile_photo_2_key: profilePhoto2Key,
+      intro_video_url: ex.introVideoUrl,
+      intro_video_compressed_url: ex.introVideoCompressedUrl ?? ex.introVideoUrl,
+      price_per_minute: 20,
+      rating: 4.8,
+      is_online: true,
+    };
+  }
+
   async listExpertRequests(): Promise<ExpertProfile[]> {
     return this.expertRepo.find({ relations: ['user'] });
   }

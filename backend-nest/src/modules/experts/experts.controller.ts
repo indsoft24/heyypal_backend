@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -77,6 +78,14 @@ export class ExpertsController {
   })
   async discover() {
     return this.experts.listDiscoverExperts();
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Public expert profile details by user id',
+  })
+  async detail(@Param('id') id: string) {
+    return this.experts.getExpertPublicProfile(Number(id));
   }
 }
 
