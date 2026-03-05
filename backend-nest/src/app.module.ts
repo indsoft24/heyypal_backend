@@ -13,6 +13,7 @@ import { ExpertsModule } from './modules/experts/experts.module';
 import { CallModule } from './modules/call/call.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { MediaModule } from './modules/media/media.module';
+import { AgoraModule } from './modules/agora/agora.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MediaModule } from './modules/media/media.module';
     ExpertsModule,
     UploadModule,
     MediaModule,
+    AgoraModule,
   ],
   controllers: [AppController],
   providers: [AppService],
