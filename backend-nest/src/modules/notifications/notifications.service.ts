@@ -122,8 +122,12 @@ export class NotificationsService {
                 data: stringData,
                 android: {
                     priority: 'high',
+                    // ttl=30s: discard message if not delivered within ring timeout.
+                    // Prevents a sleeping device from waking to a stale call screen.
+                    ttl: 30_000,
                     // No android.notification block — IncomingCallForegroundService builds
                     // its own heads-up notification with PRIORITY_MAX + fullScreenIntent.
+                    directBootOk: true,
                 },
                 token,
             };
