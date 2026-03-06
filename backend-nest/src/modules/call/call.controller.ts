@@ -11,16 +11,14 @@ import { IsInt, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CallLogService } from './call-log.service';
-import { CallSessionService } from './call-session.service';
-import { PresenceService } from './presence.service';
-import { CallStatus } from './entities/call-log.entity';
+import { CallService } from './call.service';
 
 class InitiateCallDto {
   @IsInt()
   receiverId: number;
 }
 
-class EndCallDto {
+class CallSessionDto {
   @IsString()
   callSessionId: string;
 }
@@ -32,51 +30,56 @@ class EndCallDto {
 export class CallController {
   constructor(
     private readonly callLogService: CallLogService,
-    private readonly callSessionService: CallSessionService,
-    private readonly presenceService: PresenceService,
+    private readonly callService: CallService,
   ) {}
 
   @Post('initiate')
-  @ApiOperation({ summary: 'Check if receiver is available; actual call via WebSocket call:initiate' })
+  @ApiOperation({ summary: 'Initiate 1-1 call: creates session, sends FCM to receiver, returns Agora token for caller' })
   async initiate(
     @CurrentUser('userId') userId: string,
     @Body() dto: InitiateCallDto,
   ) {
-    const available = await this.presenceService.isUserAvailable(dto.receiverId);
-    if (!available) {
+    const callerId = parseInt(userId, 10);
+    const { busy, result } = await this.callService.initiate(callerId, dto.receiverId);
+    if (busy) {
       return { ok: false, busy: true, message: 'Receiver is busy' };
     }
-    return { ok: true, busy: false, message: 'Use WebSocket namespace /call and emit call:initiate with { receiverId }' };
+    return { ok: true, busy: false, ...result };
+  }
+
+  @Post('accept')
+  @ApiOperation({ summary: 'Accept incoming call; returns Agora token for callee' })
+  async accept(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: CallSessionDto,
+  ) {
+    const receiverId = parseInt(userId, 10);
+    const { ok, result, message } = await this.callService.accept(receiverId, dto.callSessionId);
+    if (!ok) return { ok: false, message: message ?? 'Accept failed' };
+    return { ok: true, ...result };
+  }
+
+  @Post('reject')
+  @ApiOperation({ summary: 'Reject incoming call' })
+  async reject(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: CallSessionDto,
+  ) {
+    const receiverId = parseInt(userId, 10);
+    const { ok, message } = await this.callService.reject(receiverId, dto.callSessionId);
+    if (!ok) return { ok: false, message: message ?? 'Reject failed' };
+    return { ok: true };
   }
 
   @Post('end')
   @ApiOperation({ summary: 'End an ongoing call' })
   async end(
     @CurrentUser('userId') userId: string,
-    @Body() dto: EndCallDto,
+    @Body() dto: CallSessionDto,
   ) {
     const uid = parseInt(userId, 10);
-    const session = await this.callSessionService.findBySessionId(dto.callSessionId);
-    if (!session) return { ok: false, message: 'Session not found' };
-    if (session.callerId !== uid && session.receiverId !== uid) {
-      return { ok: false, message: 'Not participant' };
-    }
-    await this.callSessionService.setEnded(dto.callSessionId, 'ended');
-    await this.callSessionService.deleteBySessionId(dto.callSessionId);
-    const startTime = session.callStatus === 'connected' ? session.createdAt : null;
-    const endTime = new Date();
-    const durationSeconds = startTime
-      ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
-      : 0;
-    const log = await this.callLogService.findBySessionId(dto.callSessionId);
-    if (log) {
-      await this.callLogService.updateEnd(
-        dto.callSessionId,
-        endTime,
-        CallStatus.ENDED,
-        durationSeconds,
-      );
-    }
+    const { ok, message } = await this.callService.end(uid, dto.callSessionId);
+    if (!ok) return { ok: false, message: message ?? 'End failed' };
     return { ok: true };
   }
 

@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -12,6 +13,7 @@ import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
 import { AdminService } from './admin.service';
 import { AdminRoleGuard } from './guards/admin-role.guard';
 import { ExpertVideoService } from '../media/expert-video.service';
+import { CallLogService } from '../call/call-log.service';
 import { SetMetadata } from '@nestjs/common';
 
 const AdminOnly = () => SetMetadata('adminRoles', ['admin']);
@@ -47,6 +49,7 @@ export class AdminController {
   constructor(
     private admin: AdminService,
     private expertVideo: ExpertVideoService,
+    private callLogService: CallLogService,
   ) {}
 
   @Post('auth/login')
@@ -125,5 +128,29 @@ export class AdminController {
   @ApiOperation({ summary: 'Create seller (admin only)' })
   async createSeller(@Body() dto: CreateSellerDto) {
     return this.admin.createSeller(dto.name, dto.email, dto.password);
+  }
+
+  @Get('call-logs')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Call logs for analytics (admin only)' })
+  async getCallLogs(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('callerId') callerId?: string,
+    @Query('receiverId') receiverId?: string,
+  ) {
+    const logs = await this.callLogService.findLogsForAdmin({
+      limit: limit ? parseInt(limit, 10) : 100,
+      offset: offset ? parseInt(offset, 10) : 0,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      callerId: callerId ? parseInt(callerId, 10) : undefined,
+      receiverId: receiverId ? parseInt(receiverId, 10) : undefined,
+    });
+    return { logs };
   }
 }

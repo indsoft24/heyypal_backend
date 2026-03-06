@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
@@ -7,10 +7,14 @@ import { CallLog } from './entities/call-log.entity';
 import { CallSession, CallSessionSchema } from './schemas/call-session.schema';
 import { CallLogService } from './call-log.service';
 import { CallSessionService } from './call-session.service';
+import { CallService } from './call.service';
 import { PresenceService } from './presence.service';
 import { RtcService } from './rtc.service';
 import { CallGateway } from './call.gateway';
 import { CallController } from './call.controller';
+import { AgoraModule } from '../agora/agora.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -26,15 +30,19 @@ import { CallController } from './call.controller';
       }),
       inject: [ConfigService],
     }),
+    AgoraModule,
+    NotificationsModule,
+    UsersModule,
   ],
   controllers: [CallController],
   providers: [
     CallLogService,
     CallSessionService,
+    CallService,
     PresenceService,
     RtcService,
     CallGateway,
   ],
-  exports: [CallLogService, CallSessionService, PresenceService],
+  exports: [CallLogService, CallSessionService, CallService, PresenceService],
 })
 export class CallModule {}

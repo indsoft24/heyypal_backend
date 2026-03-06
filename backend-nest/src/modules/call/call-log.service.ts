@@ -27,6 +27,13 @@ export class CallLogService {
     return this.repo.save(log);
   }
 
+  async updateToConnected(callSessionId: string, startTime: Date): Promise<void> {
+    await this.repo.update(
+      { callSessionId },
+      { callStatus: CallStatus.CONNECTED, startTime },
+    );
+  }
+
   async updateEnd(
     callSessionId: string,
     endTime: Date,
@@ -60,6 +67,35 @@ export class CallLogService {
     }
     if (options?.limit) qb.take(options.limit);
     if (options?.offset) qb.skip(options.offset);
+
+    return qb.getMany();
+  }
+
+  /** Admin analytics: all logs with optional filters. */
+  async findLogsForAdmin(options: {
+    limit?: number;
+    offset?: number;
+    from?: Date;
+    to?: Date;
+    callerId?: number;
+    receiverId?: number;
+  }): Promise<CallLog[]> {
+    const qb = this.repo.createQueryBuilder('log').orderBy('log.created_at', 'DESC');
+
+    if (options.from && options.to) {
+      qb.andWhere('log.created_at BETWEEN :from AND :to', {
+        from: options.from,
+        to: options.to,
+      });
+    }
+    if (options.callerId != null) {
+      qb.andWhere('log.caller_id = :callerId', { callerId: options.callerId });
+    }
+    if (options.receiverId != null) {
+      qb.andWhere('log.receiver_id = :receiverId', { receiverId: options.receiverId });
+    }
+    if (options.limit) qb.take(options.limit);
+    if (options.offset) qb.skip(options.offset);
 
     return qb.getMany();
   }
