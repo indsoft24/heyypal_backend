@@ -113,10 +113,13 @@ export class CallService {
     }
 
     // Emit socket event to receiver (if online via Socket.io).
+    // Include channelName and callerName so the receiver can launch IncomingCallActivity
+    // directly from the socket event without an extra API call.
     this.callGateway.emitToUser(receiverId, 'call:ringing', {
       callSessionId,
       callerId,
       channelName,
+      callerName: caller?.name ?? '',
     });
 
     // Set ring timeout — marks MISSED in MongoDB + Postgres but does NOT delete document.
