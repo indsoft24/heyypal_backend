@@ -76,6 +76,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:-default-32-byte-key-change-in-prod!!}
       FILE_STORAGE_PATH: /app/storage
+      AGORA_APP_ID: ${AGORA_APP_ID:-}
+      AGORA_APP_CERTIFICATE: ${AGORA_APP_CERTIFICATE:-}
     volumes:
       - api_storage:/app/storage
     depends_on:
@@ -83,9 +85,9 @@ services:
       mongodb: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-    # Horizontal scaling: docker compose -f docker-compose.nest.yml up -d --scale api=2
-    ports:
-      - "5001:5001"
+    # No host port: access via gateway (nginx) only. Use 5001:5001 if you need direct API access.
+    # ports:
+    #   - "5001:5001"
 
   gateway:
     image: nginx:alpine

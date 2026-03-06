@@ -1,15 +1,21 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RtcRole, RtcTokenBuilder } from 'agora-access-token';
 
 export type AgoraRole = 'publisher' | 'subscriber';
 
 @Injectable()
 export class AgoraService {
-  private readonly appId = process.env.AGORA_APP_ID;
-  private readonly appCertificate = process.env.AGORA_APP_CERTIFICATE;
+  private readonly appId: string;
+  private readonly appCertificate: string;
+
+  constructor(config: ConfigService) {
+    this.appId = config.get<string>('AGORA_APP_ID') ?? '';
+    this.appCertificate = config.get<string>('AGORA_APP_CERTIFICATE') ?? '';
+  }
 
   generateRtcToken(params: { channelName: string; userId: number; role: AgoraRole; expireSeconds?: number }) {
-    if (!this.appId || !this.appCertificate) {
+    if (!this.appId?.trim() || !this.appCertificate?.trim()) {
       throw new InternalServerErrorException('Agora credentials not configured on server');
     }
     const { channelName, userId, role, expireSeconds = 3600 } = params;

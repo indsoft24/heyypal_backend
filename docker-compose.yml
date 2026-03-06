@@ -86,6 +86,8 @@ services:
       ADMIN_SEED_NAME: ${ADMIN_SEED_NAME:-Admin}
       # Allow browser requests from VPS/public URL (comma-separated; unset = allow all)
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080,http://127.0.0.1:3000}
+      AGORA_APP_ID: ${AGORA_APP_ID:-}
+      AGORA_APP_CERTIFICATE: ${AGORA_APP_CERTIFICATE:-}
     volumes:
       - backend_storage:/app/storage
     ports:
