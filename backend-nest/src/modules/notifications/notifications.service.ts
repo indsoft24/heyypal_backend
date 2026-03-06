@@ -138,4 +138,30 @@ export class NotificationsService {
             this.logger.error(`Error sending incoming call push: ${error.message}`, error.stack);
         }
     }
+
+    /**
+     * Send high-priority FCM to cancel/end an incoming call.
+     * This stops the ringing on the receiver's device if their app is killed
+     * and they haven't connected to the socket yet.
+     */
+    async sendCallEndedPush(token: string, callSessionId: string): Promise<void> {
+        if (!this.firebaseApp || !token) return;
+        try {
+            const message: admin.messaging.Message = {
+                data: {
+                    type: 'call_ended',
+                    callSessionId,
+                },
+                android: {
+                    priority: 'high',
+                    directBootOk: true,
+                },
+                token,
+            };
+            await this.firebaseApp.messaging().send(message);
+            this.logger.log(`[call_ended_push_sent] callSessionId=${callSessionId}`);
+        } catch (error) {
+            this.logger.error(`Error sending call ended push: ${error.message}`, error.stack);
+        }
+    }
 }

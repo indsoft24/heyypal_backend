@@ -286,7 +286,16 @@ export class CallService {
     // Update postgres log.
     await this.callLogService.updateEnd(callSessionId, endTime, CallStatus.ENDED, durationSeconds);
 
-    // Notify both sides.
+    // If call was still ringing (not connected), the receiver might be in a killed app state
+    // where the socket isn't connected yet. Send an FCM push to cancel the OS-level ring.
+    if (session.callStatus === CallSessionStatus.RINGING) {
+      const receiver = await this.usersService.findById(session.receiverId);
+      if (receiver?.fcmToken) {
+        await this.notificationsService.sendCallEndedPush(receiver.fcmToken, callSessionId);
+      }
+    }
+
+    // Notify both sides via socket (for foreground users).
     this.callGateway.emitToUser(session.callerId, 'call:end', { callSessionId });
     this.callGateway.emitToUser(session.receiverId, 'call:end', { callSessionId });
 
