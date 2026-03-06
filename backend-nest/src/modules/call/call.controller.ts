@@ -91,11 +91,20 @@ export class CallController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const uid = parseInt(userId, 10);
-    const logs = await this.callLogService.findLogsByUser(uid, {
-      limit: limit ? parseInt(limit, 10) : 50,
-      offset: offset ? parseInt(offset, 10) : 0,
-    });
-    return { logs };
+    try {
+      const uid = Number(userId);
+      const logs = await this.callLogService.findLogsByUser(uid, {
+        limit: limit ? parseInt(limit, 10) : 50,
+        offset: offset ? parseInt(offset, 10) : 0,
+      });
+      return { logs };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Internal server error',
+        error: error.message,
+        stack: error.stack
+      };
+    }
   }
 }

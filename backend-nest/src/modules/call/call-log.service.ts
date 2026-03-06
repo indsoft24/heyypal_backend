@@ -83,23 +83,16 @@ export class CallLogService {
     userId: number,
     options?: { limit?: number; offset?: number; from?: Date; to?: Date },
   ): Promise<CallLog[]> {
-    const qb = this.repo
-      .createQueryBuilder('log')
-      .leftJoinAndSelect('log.caller', 'caller')
-      .leftJoinAndSelect('log.receiver', 'receiver')
-      .where('log.caller_id = :userId OR log.receiver_id = :userId', { userId })
-      .orderBy('log.created_at', 'DESC');
-
-    if (options?.from && options?.to) {
-      qb.andWhere('log.created_at BETWEEN :from AND :to', {
-        from: options.from,
-        to: options.to,
-      });
-    }
-    if (options?.limit) qb.take(options.limit);
-    if (options?.offset) qb.skip(options.offset);
-
-    return qb.getMany();
+    return this.repo.find({
+      where: [
+        { callerId: userId },
+        { receiverId: userId }
+      ],
+      relations: ['caller', 'receiver'],
+      order: { createdAt: 'DESC' },
+      take: options?.limit ?? 50,
+      skip: options?.offset ?? 0
+    });
   }
 
   /** Admin analytics: all logs with optional filters. */
@@ -111,23 +104,16 @@ export class CallLogService {
     callerId?: number;
     receiverId?: number;
   }): Promise<CallLog[]> {
-    const qb = this.repo.createQueryBuilder('log').orderBy('log.created_at', 'DESC');
+    const where: any = {};
+    if (options.callerId != null) where.callerId = options.callerId;
+    if (options.receiverId != null) where.receiverId = options.receiverId;
 
-    if (options.from && options.to) {
-      qb.andWhere('log.created_at BETWEEN :from AND :to', {
-        from: options.from,
-        to: options.to,
-      });
-    }
-    if (options.callerId != null) {
-      qb.andWhere('log.caller_id = :callerId', { callerId: options.callerId });
-    }
-    if (options.receiverId != null) {
-      qb.andWhere('log.receiver_id = :receiverId', { receiverId: options.receiverId });
-    }
-    if (options.limit) qb.take(options.limit);
-    if (options.offset) qb.skip(options.offset);
-
-    return qb.getMany();
+    return this.repo.find({
+      where,
+      relations: ['caller', 'receiver'],
+      order: { createdAt: 'DESC' },
+      take: options.limit ?? 50,
+      skip: options.offset ?? 0
+    });
   }
 }
