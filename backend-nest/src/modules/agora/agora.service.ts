@@ -6,17 +6,21 @@ export type AgoraRole = 'publisher' | 'subscriber';
 
 @Injectable()
 export class AgoraService {
-  private readonly appId: string;
-  private readonly appCertificate: string;
+  constructor(private readonly config: ConfigService) {}
 
-  constructor(config: ConfigService) {
-    this.appId = config.get<string>('AGORA_APP_ID') ?? '';
-    this.appCertificate = config.get<string>('AGORA_APP_CERTIFICATE') ?? '';
+  private get appId(): string {
+    return this.config.get<string>('AGORA_APP_ID') ?? '';
+  }
+
+  private get appCertificate(): string {
+    return this.config.get<string>('AGORA_APP_CERTIFICATE') ?? '';
   }
 
   generateRtcToken(params: { channelName: string; userId: number; role: AgoraRole; expireSeconds?: number }) {
     if (!this.appId?.trim() || !this.appCertificate?.trim()) {
-      throw new InternalServerErrorException('Agora credentials not configured on server');
+      throw new InternalServerErrorException(
+        'Agora credentials not configured on server. Set AGORA_APP_ID and AGORA_APP_CERTIFICATE in .env or environment.',
+      );
     }
     const { channelName, userId, role, expireSeconds = 3600 } = params;
     const uid = userId;
