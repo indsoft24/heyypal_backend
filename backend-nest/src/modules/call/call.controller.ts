@@ -31,10 +31,10 @@ export class CallController {
   constructor(
     private readonly callLogService: CallLogService,
     private readonly callService: CallService,
-  ) {}
+  ) { }
 
   @Post('initiate')
-  @ApiOperation({ summary: 'Initiate 1-1 call: creates session, sends FCM to receiver, returns Agora token for caller' })
+  @ApiOperation({ summary: 'Initiate 1-1 audio call: creates session, sends FCM/socket to receiver, returns Agora token for caller' })
   async initiate(
     @CurrentUser('userId') userId: string,
     @Body() dto: InitiateCallDto,
@@ -72,12 +72,13 @@ export class CallController {
   }
 
   @Post('end')
-  @ApiOperation({ summary: 'End an ongoing call' })
+  @ApiOperation({ summary: 'End an ongoing call (idempotent — safe to call multiple times)' })
   async end(
     @CurrentUser('userId') userId: string,
     @Body() dto: CallSessionDto,
   ) {
     const uid = parseInt(userId, 10);
+    // end() is idempotent: always returns ok:true unless userId is not a participant.
     const { ok, message } = await this.callService.end(uid, dto.callSessionId);
     if (!ok) return { ok: false, message: message ?? 'End failed' };
     return { ok: true };

@@ -26,6 +26,13 @@ export interface AcceptResult {
   uid: number;
 }
 
+// Terminal statuses — session cannot transition further from these.
+const TERMINAL_STATUSES = new Set([
+  CallSessionStatus.ENDED,
+  CallSessionStatus.REJECTED,
+  CallSessionStatus.TIMEOUT,
+]);
+
 @Injectable()
 export class CallService {
   private readonly logger = new Logger(CallService.name);
@@ -40,7 +47,7 @@ export class CallService {
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
     private readonly presenceService: PresenceService,
-  ) {}
+  ) { }
 
   private clearRingTimeout(callSessionId: string): void {
     const t = this.ringTimeouts.get(callSessionId);
@@ -50,12 +57,14 @@ export class CallService {
     }
   }
 
-  /** Initiate call: create session, log, Agora token for caller, FCM + optional socket to receiver. */
+  /** Initiate call: create session, log, Agora token for caller, FCM + socket to receiver. */
   async initiate(callerId: number, receiverId: number): Promise<{ busy?: boolean; result?: InitiateResult }> {
-    await this.callSessionService.deleteStaleRingingSessions();
+    // Clean up truly stale sessions (>35s old still in RINGING) from crashed server instances.
+    await this.callSessionService.markStaleRingingsAsMissed();
+
     const inConnectedCall = await this.presenceService.isUserInConnectedCall(receiverId);
     if (inConnectedCall) {
-      this.logger.log(`Initiate blocked: receiver ${receiverId} is in an active call`);
+      this.logger.log(`[call_initiate_blocked] receiver=${receiverId} is in an active call`);
       return { busy: true };
     }
 
@@ -65,7 +74,8 @@ export class CallService {
 
     const channelName = `call_${callSessionId}`;
 
-    await this.callLogService.create({
+    // Create postgres log row immediately so it always exists for updates.
+    await this.callLogService.upsertInitiated({
       callSessionId,
       callerId,
       receiverId,
@@ -81,9 +91,10 @@ export class CallService {
       expireSeconds: 3600,
     });
 
+    // Send FCM push to receiver.
     const receiver = await this.usersService.findById(receiverId);
     if (receiver?.fcmToken) {
-      this.logger.log(`Sending incoming-call FCM to receiver ${receiverId} (callSessionId=${callSessionId})`);
+      this.logger.log(`[call_initiated] callSessionId=${callSessionId} caller=${callerId} → pushing FCM to receiver=${receiverId}`);
       await this.notificationsService.sendIncomingCallPush(receiver.fcmToken, {
         callSessionId,
         callerId: String(callerId),
@@ -91,19 +102,23 @@ export class CallService {
         callerName: receiver.name ?? undefined,
       });
     } else {
-      this.logger.warn(`Receiver ${receiverId} has no FCM token; incoming call push skipped`);
+      this.logger.warn(`[call_initiated] callSessionId=${callSessionId} receiver=${receiverId} has no FCM token; push skipped`);
     }
 
+    // Emit socket event to receiver (if online).
     this.callGateway.emitToUser(receiverId, 'call:ringing', {
       callSessionId,
       callerId,
       channelName,
     });
 
+    // Set ring timeout — marks MISSED in MongoDB + Postgres but does NOT delete document.
     this.ringTimeouts.set(
       callSessionId,
       setTimeout(() => this.handleRingTimeout(callSessionId), CALL_RING_TIMEOUT_MS),
     );
+
+    this.logger.log(`[call_initiated] callSessionId=${callSessionId} caller=${callerId} receiver=${receiverId}`);
 
     return {
       result: {
@@ -116,37 +131,43 @@ export class CallService {
     };
   }
 
+  /**
+   * Ring timeout: receiver didn't answer in 30s.
+   * Updates status to MISSED in MongoDB + Postgres. Does NOT delete the document —
+   * the caller's /api/call/end will find it and gracefully handle a terminal status.
+   */
   private async handleRingTimeout(callSessionId: string): Promise<void> {
     this.ringTimeouts.delete(callSessionId);
     const session = await this.callSessionService.findBySessionId(callSessionId);
     if (!session || session.callStatus !== CallSessionStatus.RINGING) return;
 
-    await this.callSessionService.setEnded(callSessionId, CallSessionStatus.TIMEOUT);
-    await this.callSessionService.deleteBySessionId(callSessionId);
+    this.logger.log(`[call_timeout] callSessionId=${callSessionId} — marking MISSED`);
 
-    const log = await this.callLogService.findBySessionId(callSessionId);
-    if (log) {
-      await this.callLogService.updateEnd(
-        callSessionId,
-        new Date(),
-        CallStatus.MISSED,
-        0,
-        true,
-      );
-    }
+    await this.callSessionService.setEnded(callSessionId, CallSessionStatus.TIMEOUT);
+    await this.callLogService.updateEnd(callSessionId, new Date(), CallStatus.MISSED, 0, true);
 
     this.callGateway.emitToUser(session.callerId, 'call:timeout', { callSessionId });
+    this.callGateway.emitToUser(session.receiverId, 'call:timeout', { callSessionId });
   }
 
   /** Accept call: clear timeout, set connected, update log, return Agora token for callee. */
   async accept(receiverId: number, callSessionId: string): Promise<{ ok: boolean; result?: AcceptResult; message?: string }> {
     this.clearRingTimeout(callSessionId);
     const session = await this.callSessionService.findBySessionId(callSessionId);
-    if (!session || session.receiverId !== receiverId) {
-      return { ok: false, message: 'Session not found or not receiver' };
+
+    if (!session) {
+      this.logger.warn(`[session_not_found] accept callSessionId=${callSessionId} receiverId=${receiverId}`);
+      return { ok: false, message: 'Session not found' };
     }
-    if (session.callStatus !== CallSessionStatus.RINGING) {
-      return { ok: false, message: 'Call not ringing' };
+    if (session.receiverId !== receiverId) {
+      return { ok: false, message: 'Not the receiver of this call' };
+    }
+    if (TERMINAL_STATUSES.has(session.callStatus as any)) {
+      return { ok: false, message: `Call already ${session.callStatus}` };
+    }
+    if (session.callStatus === CallSessionStatus.CONNECTED) {
+      // Idempotent: already accepted — still give caller token.
+      this.logger.log(`[call_accepted] idempotent re-accept callSessionId=${callSessionId}`);
     }
 
     await this.callSessionService.setConnected(callSessionId, [session.callerId, session.receiverId]);
@@ -166,6 +187,8 @@ export class CallService {
       acceptedBy: receiverId,
     });
 
+    this.logger.log(`[call_accepted] callSessionId=${callSessionId} receiver=${receiverId}`);
+
     return {
       ok: true,
       result: {
@@ -181,40 +204,83 @@ export class CallService {
   async reject(receiverId: number, callSessionId: string): Promise<{ ok: boolean; message?: string }> {
     this.clearRingTimeout(callSessionId);
     const session = await this.callSessionService.findBySessionId(callSessionId);
-    if (!session || session.receiverId !== receiverId) {
-      return { ok: false, message: 'Session not found or not receiver' };
+
+    if (!session) {
+      this.logger.warn(`[session_not_found] reject callSessionId=${callSessionId} receiverId=${receiverId}`);
+      return { ok: false, message: 'Session not found' };
+    }
+    if (session.receiverId !== receiverId) {
+      return { ok: false, message: 'Not the receiver of this call' };
+    }
+    if (TERMINAL_STATUSES.has(session.callStatus as any)) {
+      // Already terminated — idempotent success.
+      return { ok: true };
     }
 
     await this.callSessionService.setEnded(callSessionId, CallSessionStatus.REJECTED);
     await this.callLogService.updateEnd(callSessionId, new Date(), CallStatus.REJECTED, 0);
-    await this.callSessionService.deleteBySessionId(callSessionId);
 
     this.callGateway.emitToUser(session.callerId, 'call:reject', { callSessionId, rejectedBy: receiverId });
+    this.logger.log(`[call_rejected] callSessionId=${callSessionId} receiver=${receiverId}`);
     return { ok: true };
   }
 
-  /** End call (caller or callee). */
+  /**
+   * End call (caller or callee) via REST or socket.
+   *
+   * Idempotent:
+   *  - If already ENDED → return ok:true (no double-logging).
+   *  - If TIMEOUT/REJECTED/MISSED → return ok:true (session exists, already finalized).
+   *  - If session not found at all → return ok:true with a warning (may have been cleaned).
+   *
+   * Does NOT delete the MongoDB document — documents are cleaned by a scheduled job
+   * or the next initiate() stale cleanup. This prevents "Session not found" when
+   * the socket event and REST call race each other.
+   */
   async end(userId: number, callSessionId: string): Promise<{ ok: boolean; message?: string }> {
     this.clearRingTimeout(callSessionId);
     const session = await this.callSessionService.findBySessionId(callSessionId);
-    if (!session) return { ok: false, message: 'Session not found' };
+
+    if (!session) {
+      // Session missing: likely already cleaned up. Log a warning but return ok
+      // so the Android client doesn't stay stuck on the call screen.
+      this.logger.warn(`[session_not_found] end callSessionId=${callSessionId} userId=${userId} — treating as success`);
+      return { ok: true, message: 'Session already finalized' };
+    }
+
     if (session.callerId !== userId && session.receiverId !== userId) {
+      this.logger.warn(`[call_end_forbidden] userId=${userId} is not a participant of callSessionId=${callSessionId}`);
       return { ok: false, message: 'Not a participant' };
+    }
+
+    // Idempotent: already in a terminal state — acknowledge without re-logging.
+    if (TERMINAL_STATUSES.has(session.callStatus as any) || session.callStatus === CallSessionStatus.CONNECTED) {
+      if (session.callStatus !== CallSessionStatus.CONNECTED) {
+        this.logger.log(`[call_end] idempotent — callSessionId=${callSessionId} already ${session.callStatus}`);
+        // Still emit end event to guarantee both sides get it.
+        this.callGateway.emitToUser(session.callerId, 'call:end', { callSessionId });
+        this.callGateway.emitToUser(session.receiverId, 'call:end', { callSessionId });
+        return { ok: true };
+      }
     }
 
     const endTime = new Date();
     let durationSeconds = 0;
     const log = await this.callLogService.findBySessionId(callSessionId);
     if (log?.startTime) {
-      durationSeconds = Math.floor((endTime.getTime() - new Date(log.startTime!).getTime()) / 1000);
+      durationSeconds = Math.max(0, Math.floor((endTime.getTime() - new Date(log.startTime).getTime()) / 1000));
     }
 
+    // Update MongoDB status (soft-end, keep document).
     await this.callSessionService.setEnded(callSessionId, CallSessionStatus.ENDED);
+    // Update postgres log.
     await this.callLogService.updateEnd(callSessionId, endTime, CallStatus.ENDED, durationSeconds);
-    await this.callSessionService.deleteBySessionId(callSessionId);
 
+    // Notify both sides.
     this.callGateway.emitToUser(session.callerId, 'call:end', { callSessionId });
     this.callGateway.emitToUser(session.receiverId, 'call:end', { callSessionId });
+
+    this.logger.log(`[call_ended] callSessionId=${callSessionId} userId=${userId} duration=${durationSeconds}s`);
     return { ok: true };
   }
 }
