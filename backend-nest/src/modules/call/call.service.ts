@@ -197,7 +197,30 @@ export class CallService {
   async end(userId: number, callSessionId: string): Promise<{ ok: boolean; message?: string }> {
     this.clearRingTimeout(callSessionId);
     const session = await this.callSessionService.findBySessionId(callSessionId);
-    if (!session) return { ok: false, message: 'Session not found' };
+
+    // If the live session document is already gone (e.g. timed out and cleaned up),
+    // still treat this as a successful end so the client never sees "Session not found".
+    if (!session) {
+      const endTime = new Date();
+      const log = await this.callLogService.findBySessionId(callSessionId);
+      if (log && !log.endTime) {
+        let durationSeconds = 0;
+        if (log.startTime) {
+          durationSeconds = Math.floor(
+            (endTime.getTime() - new Date(log.startTime!).getTime()) / 1000,
+          );
+        }
+        // If we have a log without an end time, close it out as ENDED.
+        await this.callLogService.updateEnd(
+          callSessionId,
+          endTime,
+          log.callStatus ?? CallStatus.ENDED,
+          durationSeconds,
+        );
+      }
+      return { ok: true };
+    }
+
     if (session.callerId !== userId && session.receiverId !== userId) {
       return { ok: false, message: 'Not a participant' };
     }
@@ -205,13 +228,21 @@ export class CallService {
     const endTime = new Date();
     let durationSeconds = 0;
     const log = await this.callLogService.findBySessionId(callSessionId);
-    if (log?.startTime) {
-      durationSeconds = Math.floor((endTime.getTime() - new Date(log.startTime!).getTime()) / 1000);
-    }
 
-    await this.callSessionService.setEnded(callSessionId, CallSessionStatus.ENDED);
-    await this.callLogService.updateEnd(callSessionId, endTime, CallStatus.ENDED, durationSeconds);
-    await this.callSessionService.deleteBySessionId(callSessionId);
+    // If the call was already marked as TIMEOUT/MISSED by the ring timeout handler,
+    // avoid overwriting that status in the log; just clean up the session and notify peers.
+    if (session.callStatus === CallSessionStatus.TIMEOUT) {
+      await this.callSessionService.deleteBySessionId(callSessionId);
+    } else {
+      if (log?.startTime) {
+        durationSeconds = Math.floor(
+          (endTime.getTime() - new Date(log.startTime!).getTime()) / 1000,
+        );
+      }
+      await this.callSessionService.setEnded(callSessionId, CallSessionStatus.ENDED);
+      await this.callLogService.updateEnd(callSessionId, endTime, CallStatus.ENDED, durationSeconds);
+      await this.callSessionService.deleteBySessionId(callSessionId);
+    }
 
     this.callGateway.emitToUser(session.callerId, 'call:end', { callSessionId });
     this.callGateway.emitToUser(session.receiverId, 'call:end', { callSessionId });
