@@ -156,6 +156,15 @@ export class CallService {
     await this.callSessionService.setEnded(callSessionId, CallSessionStatus.TIMEOUT);
     await this.callLogService.updateEnd(callSessionId, new Date(), CallStatus.MISSED, 0, true);
 
+    const caller = await this.usersService.findById(session.callerId);
+    const receiver = await this.usersService.findById(session.receiverId);
+    if (receiver?.fcmToken) {
+      await this.notificationsService.sendMissedCallPush(receiver.fcmToken, {
+        callSessionId,
+        callerName: caller?.name
+      });
+    }
+
     this.callGateway.emitToUser(session.callerId, 'call:timeout', { callSessionId });
     this.callGateway.emitToUser(session.receiverId, 'call:timeout', { callSessionId });
   }
@@ -290,8 +299,17 @@ export class CallService {
     // where the socket isn't connected yet. Send an FCM push to cancel the OS-level ring.
     if (session.callStatus === CallSessionStatus.RINGING) {
       const receiver = await this.usersService.findById(session.receiverId);
+      const caller = await this.usersService.findById(session.callerId);
       if (receiver?.fcmToken) {
-        await this.notificationsService.sendCallEndedPush(receiver.fcmToken, callSessionId);
+        // If the caller ends before receiver accepts, it's a missed call for the receiver.
+        if (userId === session.callerId) {
+          await this.notificationsService.sendMissedCallPush(receiver.fcmToken, {
+            callSessionId,
+            callerName: caller?.name
+          });
+        } else {
+          await this.notificationsService.sendCallEndedPush(receiver.fcmToken, callSessionId);
+        }
       }
     }
 

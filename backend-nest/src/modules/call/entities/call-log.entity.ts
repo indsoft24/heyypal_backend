@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 export enum CallStatus {
   INITIATED = 'initiated',
@@ -32,6 +35,14 @@ export class CallLog {
 
   @Column({ name: 'receiver_id', type: 'int' })
   receiverId: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'caller_id' })
+  caller: User;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'receiver_id' })
+  receiver: User;
 
   @Column({
     name: 'call_status',

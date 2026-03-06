@@ -85,6 +85,8 @@ export class CallLogService {
   ): Promise<CallLog[]> {
     const qb = this.repo
       .createQueryBuilder('log')
+      .leftJoinAndSelect('log.caller', 'caller')
+      .leftJoinAndSelect('log.receiver', 'receiver')
       .where('log.caller_id = :userId OR log.receiver_id = :userId', { userId })
       .orderBy('log.created_at', 'DESC');
 

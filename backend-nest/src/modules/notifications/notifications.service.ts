@@ -164,4 +164,31 @@ export class NotificationsService {
             this.logger.error(`Error sending call ended push: ${error.message}`, error.stack);
         }
     }
+    /**
+     * Send high-priority FCM to cancel/end an incoming call and show a missed call notification.
+     */
+    async sendMissedCallPush(
+        token: string,
+        data: { callSessionId: string, callerName?: string }
+    ): Promise<void> {
+        if (!this.firebaseApp || !token) return;
+        try {
+            const message: admin.messaging.Message = {
+                data: {
+                    type: 'missed_call',
+                    callSessionId: data.callSessionId,
+                    callerName: data.callerName || 'Someone',
+                },
+                android: {
+                    priority: 'high',
+                    directBootOk: true,
+                },
+                token,
+            };
+            await this.firebaseApp.messaging().send(message);
+            this.logger.log(`[missed_call_push_sent] callSessionId=${data.callSessionId}`);
+        } catch (error) {
+            this.logger.error(`Error sending missed call push: ${error.message}`, error.stack);
+        }
+    }
 }
