@@ -113,25 +113,23 @@ export class NotificationsService {
             };
             if (data.callerName) stringData.callerName = data.callerName;
 
+            // IMPORTANT: data-only message (no 'notification' field).
+            // When 'notification' is present and the app is in background/killed,
+            // Android's FCM SDK handles display automatically and SKIPS onMessageReceived().
+            // With data-only, onMessageReceived() is ALWAYS called regardless of app state,
+            // allowing IncomingCallForegroundService to start and show the call screen.
             const message: admin.messaging.Message = {
                 data: stringData,
-                notification: {
-                    title: 'Incoming call',
-                    body: data.callerName ? `${data.callerName} is calling you` : 'You have an incoming call',
-                },
                 android: {
                     priority: 'high',
-                    notification: {
-                        sound: 'default',
-                        channelId: 'incoming_call',
-                        priority: 'max',
-                    },
+                    // No android.notification block — IncomingCallForegroundService builds
+                    // its own heads-up notification with PRIORITY_MAX + fullScreenIntent.
                 },
                 token,
             };
 
             await this.firebaseApp.messaging().send(message);
-            this.logger.log(`Incoming call push sent to token (callSessionId=${data.callSessionId})`);
+            this.logger.log(`[incoming_call_push_sent] callSessionId=${data.callSessionId}`);
         } catch (error) {
             this.logger.error(`Error sending incoming call push: ${error.message}`, error.stack);
         }

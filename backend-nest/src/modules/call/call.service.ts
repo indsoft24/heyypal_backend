@@ -92,20 +92,27 @@ export class CallService {
     });
 
     // Send FCM push to receiver.
-    const receiver = await this.usersService.findById(receiverId);
+    // Load both caller and receiver entities.
+    // receiver → provides the FCM token to push to.
+    // caller → provides the name shown on the receiver's incoming call screen.
+    const [caller, receiver] = await Promise.all([
+      this.usersService.findById(callerId),
+      this.usersService.findById(receiverId),
+    ]);
+
     if (receiver?.fcmToken) {
       this.logger.log(`[call_initiated] callSessionId=${callSessionId} caller=${callerId} → pushing FCM to receiver=${receiverId}`);
       await this.notificationsService.sendIncomingCallPush(receiver.fcmToken, {
         callSessionId,
         callerId: String(callerId),
         channelName,
-        callerName: receiver.name ?? undefined,
+        callerName: caller?.name ?? undefined,   // ← caller's name, not receiver's
       });
     } else {
       this.logger.warn(`[call_initiated] callSessionId=${callSessionId} receiver=${receiverId} has no FCM token; push skipped`);
     }
 
-    // Emit socket event to receiver (if online).
+    // Emit socket event to receiver (if online via Socket.io).
     this.callGateway.emitToUser(receiverId, 'call:ringing', {
       callSessionId,
       callerId,
