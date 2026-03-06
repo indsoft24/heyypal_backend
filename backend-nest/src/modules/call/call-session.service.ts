@@ -145,4 +145,24 @@ export class CallSessionService {
       })
       .exec();
   }
+
+  /** Only CONNECTED sessions (user is actually in a call). */
+  async countConnectedSessionsForUser(userId: number): Promise<number> {
+    return this.model
+      .countDocuments({
+        callStatus: CallSessionStatus.CONNECTED,
+        $or: [{ callerId: userId }, { receiverId: userId }],
+      })
+      .exec();
+  }
+
+  /** Remove stale RINGING sessions (e.g. server restarted and timeout never ran). Older than 35s. */
+  async deleteStaleRingingSessions(): Promise<number> {
+    const cutoff = new Date(Date.now() - 35_000);
+    const result = await this.model.deleteMany({
+      callStatus: CallSessionStatus.RINGING,
+      createdAt: { $lt: cutoff },
+    }).exec();
+    return result.deletedCount ?? 0;
+  }
 }

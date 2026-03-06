@@ -52,8 +52,10 @@ export class CallService {
 
   /** Initiate call: create session, log, Agora token for caller, FCM + optional socket to receiver. */
   async initiate(callerId: number, receiverId: number): Promise<{ busy?: boolean; result?: InitiateResult }> {
-    const inCall = await this.presenceService.isUserInCall(receiverId);
-    if (inCall) {
+    await this.callSessionService.deleteStaleRingingSessions();
+    const inConnectedCall = await this.presenceService.isUserInConnectedCall(receiverId);
+    if (inConnectedCall) {
+      this.logger.log(`Initiate blocked: receiver ${receiverId} is in an active call`);
       return { busy: true };
     }
 
@@ -81,12 +83,15 @@ export class CallService {
 
     const receiver = await this.usersService.findById(receiverId);
     if (receiver?.fcmToken) {
+      this.logger.log(`Sending incoming-call FCM to receiver ${receiverId} (callSessionId=${callSessionId})`);
       await this.notificationsService.sendIncomingCallPush(receiver.fcmToken, {
         callSessionId,
         callerId: String(callerId),
         channelName,
         callerName: receiver.name ?? undefined,
       });
+    } else {
+      this.logger.warn(`Receiver ${receiverId} has no FCM token; incoming call push skipped`);
     }
 
     this.callGateway.emitToUser(receiverId, 'call:ringing', {

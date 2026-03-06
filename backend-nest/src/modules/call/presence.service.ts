@@ -18,6 +18,12 @@ export class PresenceService {
     return count > 0;
   }
 
+  /** True only when user is in an actual CONNECTED call. Used for initiate so we don't block on stale RINGING. */
+  async isUserInConnectedCall(userId: number): Promise<boolean> {
+    const count = await this.callSessionService.countConnectedSessionsForUser(userId);
+    return count > 0;
+  }
+
   /** Get active session for user if any (caller or receiver). */
   async getActiveSession(userId: number) {
     return this.callSessionService.findActiveSessionByUser(userId);
