@@ -27,6 +27,13 @@ ALTER TABLE users
 -- FCM token for push notifications (required by User entity; add on existing DBs if Google login 500s)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(255) DEFAULT NULL;
 
+-- User notification/settings preferences (GET/PUT /api/users/preferences/notifications)
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  email_alerts BOOLEAN NOT NULL DEFAULT true,
+  push_promo BOOLEAN NOT NULL DEFAULT false
+);
+
 CREATE TABLE IF NOT EXISTS expert_profiles (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,

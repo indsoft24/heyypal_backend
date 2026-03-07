@@ -64,7 +64,7 @@ export class UploadService {
 
   /** Save a buffer to a subdir with a UUID filename. Returns relative path (e.g. expert-photos/uuid.jpg). */
   async saveFile(
-    subdir: 'expert-photos' | 'expert-videos' | 'expert-documents',
+    subdir: 'expert-photos' | 'expert-videos' | 'expert-documents' | 'user-photos',
     buffer: Buffer,
     mimetype: string,
   ): Promise<string> {
@@ -128,6 +128,25 @@ export class UploadService {
     }
     const rel = await this.saveFile('expert-videos', file.buffer, file.mimetype);
     return this.getPublicUrl(rel);
+  }
+
+  /** Validate and save a single user profile/avatar photo. Returns relative path for storing in user.profilePhoto1Key. */
+  async saveUserProfilePhoto(file: { buffer: Buffer; mimetype: string; size: number }): Promise<string> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Profile photo file required');
+    }
+    if (file.size > PHOTO_MAX_SIZE) {
+      throw new BadRequestException(
+        `Photo exceeds ${PHOTO_MAX_SIZE / 1024 / 1024} MB limit`,
+      );
+    }
+    const mime = (file.mimetype || '').toLowerCase().split(';')[0].trim();
+    if (!IMAGE_MIMES.has(mime)) {
+      throw new BadRequestException(
+        `Invalid photo type: ${file.mimetype}. Use JPEG, PNG, GIF, or WebP`,
+      );
+    }
+    return this.saveFile('user-photos', file.buffer, file.mimetype);
   }
 
   /** Validate and save a single document (image or PDF). Returns public URL. */
