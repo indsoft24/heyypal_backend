@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { IsArray, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, ArrayNotEmpty, Min } from 'class-validator';
-import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ExpertsService } from './experts.service';
@@ -91,12 +90,12 @@ export class ExpertsController {
   })
   async discover(
     @Query('categoryId') categoryId?: string,
-    @Query('page') @Type(() => Number) page = 1,
-    @Query('limit') @Type(() => Number) limit = 20,
+    @Query('page') page?: string | number,
+    @Query('limit') limit?: string | number,
   ) {
     const catId = categoryId ? parseInt(categoryId, 10) : undefined;
-    const p = Math.max(1, Number.isFinite(page) ? page : 1);
-    const l = Math.min(50, Math.max(1, Number.isFinite(limit) ? limit : 20));
+    const p = Math.max(1, parseInt(String(page ?? 1), 10) || 1);
+    const l = Math.min(50, Math.max(1, parseInt(String(limit ?? 20), 10) || 20));
     return this.experts.listDiscoverExpertsPaginated(catId, p, l);
   }
 
