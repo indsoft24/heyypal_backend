@@ -89,12 +89,19 @@ export class NotificationsService {
     }
 
     /**
-     * Send high-priority FCM for incoming call. Use data payload so app can handle when
-     * in background/killed (onMessageReceived). Optional notification shows "Incoming call" when app is closed.
+     * Send high-priority data-only FCM for incoming call.
+     * Works when app is foreground, background, or killed. Android shows full-screen intent.
      */
     async sendIncomingCallPush(
         token: string,
-        data: { callSessionId: string; callerId: string; channelName: string; callerName?: string },
+        data: {
+            callSessionId: string;
+            callerId: string;
+            channelName: string;
+            callerName?: string;
+            agoraToken?: string;
+            uid?: number;
+        },
     ): Promise<void> {
         if (!this.firebaseApp) {
             this.logger.warn('Firebase APP not initialized, skipping incoming call push');
@@ -107,31 +114,20 @@ export class NotificationsService {
         try {
             const stringData: Record<string, string> = {
                 type: 'incoming_call',
+                callId: data.callSessionId,
                 callSessionId: data.callSessionId,
                 callerId: data.callerId,
                 channelName: data.channelName,
             };
             if (data.callerName) stringData.callerName = data.callerName;
+            if (data.agoraToken) stringData.agoraToken = data.agoraToken;
+            if (data.uid != null) stringData.uid = String(data.uid);
 
-            // IMPORTANT: data-only message (no 'notification' field).
-            // When 'notification' is present and the app is in background/killed,
-            // Android's FCM SDK handles display automatically and SKIPS onMessageReceived().
-            // With data-only, onMessageReceived() is ALWAYS called regardless of app state,
-            // allowing IncomingCallForegroundService to start and show the call screen.
             const message: admin.messaging.Message = {
-                notification: {
-                    title: 'Incoming Call',
-                    body: `${data.callerName || 'Someone'} is calling you`,
-                },
                 data: stringData,
                 android: {
                     priority: 'high',
                     ttl: 30_000,
-                    notification: {
-                        channelId: 'heyypal_ringing',
-                        priority: 'max',
-                        visibility: 'public',
-                    },
                     directBootOk: true,
                 },
                 token,
@@ -146,8 +142,7 @@ export class NotificationsService {
 
     /**
      * Send high-priority FCM to cancel/end an incoming call.
-     * This stops the ringing on the receiver's device if their app is killed
-     * and they haven't connected to the socket yet.
+     * Stops ringing on receiver's device when app is killed.
      */
     async sendCallEndedPush(token: string, callSessionId: string): Promise<void> {
         if (!this.firebaseApp || !token) return;
@@ -156,6 +151,7 @@ export class NotificationsService {
                 data: {
                     type: 'call_ended',
                     callSessionId,
+                    callId: callSessionId,
                 },
                 android: {
                     priority: 'high',
@@ -167,6 +163,29 @@ export class NotificationsService {
             this.logger.log(`[call_ended_push_sent] callSessionId=${callSessionId}`);
         } catch (error) {
             this.logger.error(`Error sending call ended push: ${error.message}`, error.stack);
+        }
+    }
+
+    /** Alias: cancel call (stops ringing). Same as sendCallEndedPush. */
+    async sendCallCancelledPush(token: string, callSessionId: string): Promise<void> {
+        if (!this.firebaseApp || !token) return;
+        try {
+            const message: admin.messaging.Message = {
+                data: {
+                    type: 'call_cancelled',
+                    callSessionId,
+                    callId: callSessionId,
+                },
+                android: {
+                    priority: 'high',
+                    directBootOk: true,
+                },
+                token,
+            };
+            await this.firebaseApp.messaging().send(message);
+            this.logger.log(`[call_cancelled_push_sent] callSessionId=${callSessionId}`);
+        } catch (error) {
+            this.logger.error(`Error sending call cancelled push: ${error.message}`, error.stack);
         }
     }
     /**
@@ -198,41 +217,67 @@ export class NotificationsService {
     }
 
     /**
-     * Send professional data-only FCM for chat messages.
-     * Use data-only payload so Android can handle MessagingStyle + direct reply in onMessageReceived().
+     * Send data-only FCM for chat messages (type 'chat' for backward compat).
      */
     async sendChatPush(
         token: string,
-        data: { senderId: string; senderName: string; content: string; messageId: string },
+        data: { senderId: string; senderName: string; content: string; messageId: string; conversationId?: string },
     ): Promise<void> {
         if (!this.firebaseApp || !token) return;
         try {
+            const payload: Record<string, string> = {
+                type: 'chat',
+                senderId: data.senderId,
+                senderName: data.senderName,
+                content: data.content,
+                messageId: data.messageId,
+            };
+            if (data.conversationId) payload.conversationId = data.conversationId;
             const message: admin.messaging.Message = {
-                notification: {
-                    title: data.senderName,
-                    body: data.content,
-                },
-                data: {
-                    type: 'chat',
-                    senderId: data.senderId,
-                    senderName: data.senderName,
-                    content: data.content,
-                    messageId: data.messageId,
-                },
-                android: {
-                    priority: 'high',
-                    ttl: 604_800_000,
-                    notification: {
-                        channelId: 'chat_notifications',
-                        sound: 'default',
-                    }
-                },
+                data: payload,
+                android: { priority: 'high', ttl: 604_800_000 },
                 token,
             };
             await this.firebaseApp.messaging().send(message);
             this.logger.log(`[chat_push_sent] from=${data.senderName} messageId=${data.messageId}`);
         } catch (error) {
             this.logger.error(`Error sending chat push: ${error.message}`, error.stack);
+        }
+    }
+
+    /**
+     * Send data-only FCM for chat (type 'chat_message'). Use for new clients.
+     */
+    async sendChatMessagePush(
+        token: string,
+        data: {
+            conversationId: string;
+            senderId: string;
+            senderName: string;
+            message: string;
+            messageId?: string;
+        },
+    ): Promise<void> {
+        if (!this.firebaseApp || !token) return;
+        try {
+            const payload: Record<string, string> = {
+                type: 'chat_message',
+                conversationId: data.conversationId,
+                senderId: data.senderId,
+                senderName: data.senderName,
+                message: data.message,
+                content: data.message,
+            };
+            if (data.messageId) payload.messageId = data.messageId;
+            const message: admin.messaging.Message = {
+                data: payload,
+                android: { priority: 'high', ttl: 604_800_000 },
+                token,
+            };
+            await this.firebaseApp.messaging().send(message);
+            this.logger.log(`[chat_message_push_sent] from=${data.senderName}`);
+        } catch (error) {
+            this.logger.error(`Error sending chat message push: ${error.message}`, error.stack);
         }
     }
 }

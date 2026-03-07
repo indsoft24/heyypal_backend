@@ -7,6 +7,7 @@ import { UserPreference } from './entities/user-preference.entity';
 import { EncryptionService } from '../../core/encryption/encryption.service';
 import { CallLog, CallStatus } from '../call/entities/call-log.entity';
 import { Message } from '../chat/entities/message.entity';
+import { DeviceFcmToken } from '../notifications/entities/device-fcm-token.entity';
 import { UploadService } from '../upload/upload.service';
 
 /** Stats returned in GET /users/me and profile-stats. */
@@ -55,6 +56,7 @@ export class UsersService {
     @InjectRepository(UserPreference) private prefRepo: Repository<UserPreference>,
     @InjectRepository(CallLog) private callLogRepo: Repository<CallLog>,
     @InjectRepository(Message) private messageRepo: Repository<Message>,
+    @InjectRepository(DeviceFcmToken) private deviceTokenRepo: Repository<DeviceFcmToken>,
     private encryption: EncryptionService,
     private config: ConfigService,
     private uploadService: UploadService,
@@ -169,8 +171,25 @@ export class UsersService {
     return user.phoneEnc ? this.encryption.decrypt(user.phoneEnc) : null;
   }
 
-  async updateFcmToken(userId: number, token: string): Promise<void> {
+  async updateFcmToken(
+    userId: number,
+    token: string,
+    deviceId?: string,
+    platform?: string,
+  ): Promise<void> {
     await this.userRepo.update(userId, { fcmToken: token });
+    const did = deviceId?.trim() || 'default';
+    const plat = platform?.trim() || 'android';
+    await this.deviceTokenRepo.upsert(
+      {
+        userId,
+        deviceId: did,
+        platform: plat,
+        fcmToken: token,
+        lastActive: new Date(),
+      },
+      { conflictPaths: ['userId', 'deviceId'] },
+    );
   }
 
   async getNotificationPreferences(userId: number): Promise<{ emailAlerts: boolean; pushPromo: boolean }> {

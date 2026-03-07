@@ -174,11 +174,13 @@ export class UsersController {
   async updateFcmToken(
     @CurrentUser('userId') userId: string,
     @Body('token') token: string,
+    @Body('deviceId') deviceId?: string,
+    @Body('platform') platform?: string,
   ) {
     if (!token) {
       return { success: false, message: 'Token is required' };
     }
-    await this.users.updateFcmToken(Number(userId), token);
+    await this.users.updateFcmToken(Number(userId), token, deviceId, platform);
     return { success: true };
   }
 }
