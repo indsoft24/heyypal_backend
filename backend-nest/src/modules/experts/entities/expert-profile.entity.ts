@@ -10,6 +10,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { ExpertType } from '../../users/entities/user.entity';
 
+/** @deprecated Use Category entity and categoryId/name. Kept for backward compatibility in DTOs. */
 export enum ExpertCategory {
   FITNESS = 'Fitness',
   EMOTIONAL_HELP = 'Emotional help',
@@ -33,8 +34,9 @@ export class ExpertProfile {
   @Column({ type: 'enum', enum: ExpertType, nullable: true })
   type: ExpertType;
 
-  @Column({ type: 'enum', enum: ExpertCategory, nullable: true })
-  category: ExpertCategory;
+  /** Category name (matches Category.name). Stored for filtering; source of truth is categories table. */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  category: string | null;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
   bio: string;

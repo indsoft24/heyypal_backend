@@ -22,6 +22,7 @@ async function bootstrap() {
   await mkdir(join(uploadDir, 'expert-videos'), { recursive: true });
   await mkdir(join(uploadDir, 'expert-documents'), { recursive: true });
   await mkdir(join(uploadDir, 'user-photos'), { recursive: true });
+  await mkdir(join(uploadDir, 'category-photos'), { recursive: true });
   app.useStaticAssets(uploadDir, { prefix: '/uploads/' });
   app.useGlobalPipes(
     new ValidationPipe({

@@ -15,6 +15,15 @@ export default function DashboardPage() {
           </p>
         </Link>
         <Link
+          href="/dashboard/categories"
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-indigo-200 hover:shadow"
+        >
+          <h2 className="font-medium text-slate-800">Categories</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage explore categories. Add or edit categories with photo and description.
+          </p>
+        </Link>
+        <Link
           href="/dashboard/sellers"
           className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-indigo-200 hover:shadow"
         >

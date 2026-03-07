@@ -117,6 +117,17 @@ export function getMediaUrl(fileKey: string): string {
   return `${API_BASE}/api/media/${encodeURIComponent(fileKey)}`;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  photoUrl: string | null;
+  shortDescription: string | null;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const adminApi = {
   login: (email: string, password: string) =>
     api<{ accessToken: string; user: AdminUser }>('/admin/auth/login', {
@@ -141,4 +152,26 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ name, email, password }),
     }),
+  getCategories: (search?: string) =>
+    api<Category[]>('/admin/categories' + (search ? `?search=${encodeURIComponent(search)}` : '')),
+  getCategory: (id: number) => api<Category>(`/admin/categories/${id}`),
+  createCategory: (body: { name: string; slug?: string; photoUrl?: string | null; shortDescription?: string | null; sortOrder?: number }) =>
+    api<Category>('/admin/categories', { method: 'POST', body: JSON.stringify(body) }),
+  updateCategory: (id: number, body: { name?: string; slug?: string; photoUrl?: string | null; shortDescription?: string | null; sortOrder?: number }) =>
+    api<Category>(`/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCategory: (id: number) =>
+    api<void>(`/admin/categories/${id}`, { method: 'DELETE' }),
+  uploadCategoryPhoto: async (file: File): Promise<{ url: string }> => {
+    const form = new FormData();
+    form.append('photo', file);
+    const token = getToken();
+    const res = await fetch(`${API_BASE}/api/admin/categories/upload-photo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message ?? data.error ?? `Upload failed`);
+    return data;
+  },
 };

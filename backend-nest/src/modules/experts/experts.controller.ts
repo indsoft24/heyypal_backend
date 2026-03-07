@@ -4,22 +4,25 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, ArrayNotEmpty } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, ArrayNotEmpty, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ExpertsService } from './experts.service';
-import { ExpertCategory } from './entities/expert-profile.entity';
 import { ExpertType } from '../users/entities/user.entity';
 
 class SubmitExpertProfileDto {
   @IsEnum(ExpertType)
   type: ExpertType;
 
-  @IsEnum(ExpertCategory)
-  category: ExpertCategory;
+  @IsNumber()
+  @IsInt()
+  @Min(1)
+  categoryId: number;
 
   @IsString()
   @IsNotEmpty()
@@ -84,10 +87,17 @@ export class ExpertsController {
 
   @Get('discover')
   @ApiOperation({
-    summary: 'Public list of approved experts for discovery/home screen',
+    summary: 'Public list of approved experts with optional category filter and pagination',
   })
-  async discover() {
-    return this.experts.listDiscoverExperts();
+  async discover(
+    @Query('categoryId') categoryId?: string,
+    @Query('page') @Type(() => Number) page = 1,
+    @Query('limit') @Type(() => Number) limit = 20,
+  ) {
+    const catId = categoryId ? parseInt(categoryId, 10) : undefined;
+    const p = Math.max(1, Number.isFinite(page) ? page : 1);
+    const l = Math.min(50, Math.max(1, Number.isFinite(limit) ? limit : 20));
+    return this.experts.listDiscoverExpertsPaginated(catId, p, l);
   }
 
   @Get(':id')

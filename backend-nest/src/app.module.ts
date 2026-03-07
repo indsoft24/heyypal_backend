@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { HealthModule } from './modules/health/health.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ExpertsModule } from './modules/experts/experts.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { CallModule } from './modules/call/call.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { MediaModule } from './modules/media/media.module';
@@ -49,6 +50,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     AdminModule,
     CallModule,
     ExpertsModule,
+    CategoriesModule,
     UploadModule,
     MediaModule,
     AgoraModule,

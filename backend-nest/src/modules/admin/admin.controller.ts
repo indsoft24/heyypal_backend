@@ -1,12 +1,19 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
+  Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
@@ -14,7 +21,10 @@ import { AdminService } from './admin.service';
 import { AdminRoleGuard } from './guards/admin-role.guard';
 import { ExpertVideoService } from '../media/expert-video.service';
 import { CallLogService } from '../call/call-log.service';
+import { CategoriesService, CreateCategoryDto, UpdateCategoryDto } from '../categories/categories.service';
+import { UploadService } from '../upload/upload.service';
 import { SetMetadata } from '@nestjs/common';
+import { memoryStorage } from 'multer';
 
 const AdminOnly = () => SetMetadata('adminRoles', ['admin']);
 const AdminOrSeller = () => SetMetadata('adminRoles', ['admin', 'seller']);
@@ -50,6 +60,8 @@ export class AdminController {
     private admin: AdminService,
     private expertVideo: ExpertVideoService,
     private callLogService: CallLogService,
+    private categoriesService: CategoriesService,
+    private uploadService: UploadService,
   ) {}
 
   @Post('auth/login')
@@ -128,6 +140,75 @@ export class AdminController {
   @ApiOperation({ summary: 'Create seller (admin only)' })
   async createSeller(@Body() dto: CreateSellerDto) {
     return this.admin.createSeller(dto.name, dto.email, dto.password);
+  }
+
+  @Get('categories')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List categories (admin)' })
+  async getCategories(@Query('search') search?: string) {
+    return this.categoriesService.findForAdmin(search);
+  }
+
+  @Get('categories/:id')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get category by id (admin)' })
+  async getCategory(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.findById(id);
+  }
+
+  @Post('categories/upload-photo')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  @ApiOperation({ summary: 'Upload category photo (admin)' })
+  async uploadCategoryPhoto(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.buffer?.length) throw new BadRequestException('Photo file required');
+    const url = await this.uploadService.saveCategoryPhoto({
+      buffer: file.buffer,
+      mimetype: file.mimetype,
+      size: file.size,
+    });
+    return { url };
+  }
+
+  @Post('categories')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create category (admin)' })
+  async createCategory(@Body() dto: CreateCategoryDto) {
+    return this.categoriesService.create(dto);
+  }
+
+  @Put('categories/:id')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update category (admin)' })
+  async updateCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.categoriesService.update(id, dto);
+  }
+
+  @Delete('categories/:id')
+  @UseGuards(AuthGuard('jwt'), AdminRoleGuard)
+  @AdminOnly()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete category (admin)' })
+  async deleteCategory(@Param('id', ParseIntPipe) id: number) {
+    await this.categoriesService.remove(id);
   }
 
   @Get('call-logs')

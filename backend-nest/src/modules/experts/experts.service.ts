@@ -2,9 +2,10 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ExpertProfile, ExpertCategory } from './entities/expert-profile.entity';
+import { ExpertProfile } from './entities/expert-profile.entity';
 import { User, ExpertStatus, ExpertType } from '../users/entities/user.entity';
 import { ExpertVideo, ExpertVideoStatus } from '../media/entities/expert-video.entity';
+import { CategoriesService } from '../categories/categories.service';
 
 export interface ExpertOnboardingStatusDto {
   onboardingComplete: boolean;
@@ -24,6 +25,7 @@ export class ExpertsService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(ExpertVideo) private expertVideoRepo: Repository<ExpertVideo>,
     private config: ConfigService,
+    private categoriesService: CategoriesService,
   ) {
     const base = this.config.get<string>('API_PUBLIC_URL') || 'http://localhost:5001';
     this.publicBaseUrl = base.replace(/\/$/, '');
@@ -93,7 +95,7 @@ export class ExpertsService {
 
   async submitExpertProfile(userId: number, payload: {
     type: ExpertType;
-    category: ExpertCategory;
+    categoryId: number;
     bio: string;
     languagesSpoken: string[];
     photos: string[];
@@ -148,9 +150,14 @@ export class ExpertsService {
     user.expertType = payload.type;
     await this.userRepo.save(user);
 
+    const category = await this.categoriesService.findById(payload.categoryId);
     const profile = this.expertRepo.create({
       user,
-      ...payload,
+      type: payload.type,
+      category: category.name,
+      bio: payload.bio,
+      languagesSpoken: payload.languagesSpoken,
+      photos: payload.photos,
       introVideoUrl: introUrl,
       introVideoCompressedUrl: introCompressed,
       degreeCertificateUrl: payload.degreeCertificateUrl?.trim() || null,
@@ -161,37 +168,54 @@ export class ExpertsService {
   }
 
   /**
-   * Public list of approved experts for the mobile home screen.
-   * Only experts with ExpertStatus.APPROVED are returned.
-   * Returns lightweight data: name, category, bio, languages and profile photo keys.
+   * Public list of approved experts with optional category filter and pagination.
+   * categoryId undefined = "All" (no filter). Returns { experts, total, page, limit, totalPages }.
    */
-  async listDiscoverExperts() {
-    const experts = await this.expertRepo.find({
-      relations: ['user'],
-      order: { createdAt: 'DESC' },
-    });
+  async listDiscoverExpertsPaginated(
+    categoryId: number | undefined,
+    page: number,
+    limit: number,
+  ) {
+    const qb = this.expertRepo
+      .createQueryBuilder('ex')
+      .innerJoinAndSelect('ex.user', 'user')
+      .where('user.expert_status = :status', { status: ExpertStatus.APPROVED })
+      .orderBy('ex.createdAt', 'DESC');
+
+    if (categoryId != null) {
+      const category = await this.categoriesService.findById(categoryId);
+      qb.andWhere('ex.category = :categoryName', { categoryName: category.name });
+    }
+
+    const total = await qb.getCount();
+    const experts = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    const totalPages = Math.ceil(total / limit) || 1;
     return {
-      experts: experts
-        .filter((ex) => ex.user.expertStatus === ExpertStatus.APPROVED)
-        .map((ex) => {
-          // Prefer profile photos stored on the user row; fall back to expert profile photos
-          const photos = ex.photos ?? [];
-          const profilePhoto1Key = ex.user.profilePhoto1Key ?? photos[0] ?? null;
-          const profilePhoto2Key = ex.user.profilePhoto2Key ?? photos[1] ?? null;
-          return {
-            id: ex.user.id,
-            name: ex.user.name,
-            category: ex.category,
-            bio: ex.bio,
-            languages: ex.languagesSpoken,
-            profile_photo_1_key: this.toProfilePhotoUrl(profilePhoto1Key),
-            profile_photo_2_key: this.toProfilePhotoUrl(profilePhoto2Key),
-            // Placeholders for price/rating; can be wired to real data later.
-            price_per_minute: 20,
-            rating: 4.8,
-            is_online: true,
-          };
-        }),
+      experts: experts.map((ex) => {
+        const photos = ex.photos ?? [];
+        const profilePhoto1Key = ex.user.profilePhoto1Key ?? photos[0] ?? null;
+        const profilePhoto2Key = ex.user.profilePhoto2Key ?? photos[1] ?? null;
+        return {
+          id: ex.user.id,
+          name: ex.user.name,
+          category: ex.category,
+          bio: ex.bio,
+          languages: ex.languagesSpoken,
+          profile_photo_1_key: this.toProfilePhotoUrl(profilePhoto1Key),
+          profile_photo_2_key: this.toProfilePhotoUrl(profilePhoto2Key),
+          price_per_minute: 20,
+          rating: 4.8,
+          is_online: true,
+        };
+      }),
+      total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
