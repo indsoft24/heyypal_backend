@@ -38,7 +38,7 @@ export class NotificationsService {
                     privateKey,
                 }),
             });
-            this.logger.log('Firebase Admin initialized successfully.');
+            this.logger.log(`Firebase Admin initialized successfully for PROJECT_ID=${projectId}`);
         } catch (error) {
             this.logger.error(`Error initializing Firebase Admin: ${error.message}`, error.stack);
         }
@@ -119,14 +119,19 @@ export class NotificationsService {
             // With data-only, onMessageReceived() is ALWAYS called regardless of app state,
             // allowing IncomingCallForegroundService to start and show the call screen.
             const message: admin.messaging.Message = {
+                notification: {
+                    title: 'Incoming Call',
+                    body: `${data.callerName || 'Someone'} is calling you`,
+                },
                 data: stringData,
                 android: {
                     priority: 'high',
-                    // ttl=30s: discard message if not delivered within ring timeout.
-                    // Prevents a sleeping device from waking to a stale call screen.
                     ttl: 30_000,
-                    // No android.notification block — IncomingCallForegroundService builds
-                    // its own heads-up notification with PRIORITY_MAX + fullScreenIntent.
+                    notification: {
+                        channelId: 'heyypal_ringing',
+                        priority: 'max',
+                        visibility: 'public',
+                    },
                     directBootOk: true,
                 },
                 token,
@@ -203,6 +208,10 @@ export class NotificationsService {
         if (!this.firebaseApp || !token) return;
         try {
             const message: admin.messaging.Message = {
+                notification: {
+                    title: data.senderName,
+                    body: data.content,
+                },
                 data: {
                     type: 'chat',
                     senderId: data.senderId,
@@ -212,8 +221,11 @@ export class NotificationsService {
                 },
                 android: {
                     priority: 'high',
-                    // ttl=1 week for chat messages
                     ttl: 604_800_000,
+                    notification: {
+                        channelId: 'chat_notifications',
+                        sound: 'default',
+                    }
                 },
                 token,
             };
