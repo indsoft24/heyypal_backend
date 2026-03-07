@@ -100,8 +100,19 @@ export class AuthService {
         role: user.role,
         expertStatus: user.expertStatus,
         profileCompleted: user.profileCompleted,
+        profilePicUrl: this.getProfilePicUrl(user.profilePhoto1Key),
+        gender: user.gender ?? null,
+        dateOfBirth: user.dateOfBirth ?? null,
       },
     };
+  }
+
+  /** Same logic as UsersService.getProfilePicUrl: full URL or build from relative path. */
+  private getProfilePicUrl(key: string | null): string | null {
+    if (!key?.trim()) return null;
+    if (key.startsWith('http://') || key.startsWith('https://')) return key;
+    const base = this.config.get<string>('API_PUBLIC_URL') || 'http://localhost:5001';
+    return `${base.replace(/\/$/, '')}/uploads/${key.replace(/^\/+/, '')}`;
   }
 
   async refresh(refreshToken: string) {

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ExpertProfile, ExpertCategory } from './entities/expert-profile.entity';
@@ -16,11 +17,24 @@ export interface ExpertOnboardingStatusDto {
 
 @Injectable()
 export class ExpertsService {
+  private readonly publicBaseUrl: string;
+
   constructor(
     @InjectRepository(ExpertProfile) private expertRepo: Repository<ExpertProfile>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(ExpertVideo) private expertVideoRepo: Repository<ExpertVideo>,
-  ) {}
+    private config: ConfigService,
+  ) {
+    const base = this.config.get<string>('API_PUBLIC_URL') || 'http://localhost:5001';
+    this.publicBaseUrl = base.replace(/\/$/, '');
+  }
+
+  /** Resolve profile photo key to full public URL (same logic as UsersService.getProfilePicUrl). */
+  private toProfilePhotoUrl(key: string | null): string | null {
+    if (!key?.trim()) return null;
+    if (key.startsWith('http://') || key.startsWith('https://')) return key;
+    return `${this.publicBaseUrl}/uploads/${key.replace(/^\/+/, '')}`;
+  }
 
   /**
    * Returns whether the expert has completed step 3 (final step): profile with
@@ -170,8 +184,8 @@ export class ExpertsService {
             category: ex.category,
             bio: ex.bio,
             languages: ex.languagesSpoken,
-            profile_photo_1_key: profilePhoto1Key,
-            profile_photo_2_key: profilePhoto2Key,
+            profile_photo_1_key: this.toProfilePhotoUrl(profilePhoto1Key),
+            profile_photo_2_key: this.toProfilePhotoUrl(profilePhoto2Key),
             // Placeholders for price/rating; can be wired to real data later.
             price_per_minute: 20,
             rating: 4.8,
@@ -201,8 +215,8 @@ export class ExpertsService {
       category: ex.category,
       bio: ex.bio,
       languages: ex.languagesSpoken,
-      profile_photo_1_key: profilePhoto1Key,
-      profile_photo_2_key: profilePhoto2Key,
+      profile_photo_1_key: this.toProfilePhotoUrl(profilePhoto1Key),
+      profile_photo_2_key: this.toProfilePhotoUrl(profilePhoto2Key),
       intro_video_url: ex.introVideoUrl,
       intro_video_compressed_url: ex.introVideoCompressedUrl ?? ex.introVideoUrl,
       price_per_minute: 20,

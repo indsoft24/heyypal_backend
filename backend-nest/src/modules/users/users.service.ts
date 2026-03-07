@@ -26,6 +26,8 @@ export interface UserMeDto {
   expertStatus: string | null;
   profileCompleted: boolean;
   profilePicUrl: string | null;
+  gender: string | null;
+  dateOfBirth: string | null;
   stats: UserStatsDto;
 }
 
@@ -65,9 +67,16 @@ export class UsersService {
     return this.userRepo.findOne({ where: { id: Number(id) } });
   }
 
-  /** Build public URL for a stored profile photo key. */
+  /** Build public URL for a stored profile photo key.
+   * Handles two cases:
+   *   1. Full URL already stored (new behaviour): return as-is.
+   *   2. Legacy relative path (old rows): prepend base + /uploads/.
+   */
   getProfilePicUrl(key: string | null): string | null {
     if (!key?.trim()) return null;
+    // Already a full URL — return directly
+    if (key.startsWith('http://') || key.startsWith('https://')) return key;
+    // Legacy relative path — build full URL
     return `${this.publicBaseUrl}/uploads/${key.replace(/^\/+/, '')}`;
   }
 
@@ -84,6 +93,8 @@ export class UsersService {
       expertStatus: user.expertStatus,
       profileCompleted: user.profileCompleted,
       profilePicUrl,
+      gender: user.gender ?? null,
+      dateOfBirth: user.dateOfBirth ?? null,
       stats: stats ?? { sessionsCount: 0, rating: null, spentAmount: 0 },
     };
   }

@@ -105,7 +105,7 @@ export class UploadService {
     const urls: string[] = [];
     for (const f of files) {
       const mime = (f.mimetype || '').toLowerCase().split(';')[0].trim();
-    const rel = await this.saveFile('expert-photos', f.buffer, mime);
+      const rel = await this.saveFile('expert-photos', f.buffer, mime);
       urls.push(this.getPublicUrl(rel));
     }
     return urls;
@@ -130,7 +130,15 @@ export class UploadService {
     return this.getPublicUrl(rel);
   }
 
-  /** Validate and save a single user profile/avatar photo. Returns relative path for storing in user.profilePhoto1Key. */
+  /** Normalize a mimetype: wildcards like image/* → image/jpeg */
+  private normalizeMime(mimetype: string): string {
+    const raw = (mimetype || '').toLowerCase().split(';')[0].trim();
+    // Android sometimes sends "image/*" — fall back to jpeg
+    if (raw === 'image/*' || raw === 'image') return 'image/jpeg';
+    return raw;
+  }
+
+  /** Validate and save a single user profile/avatar photo. Returns full public URL for storing in user.profilePhoto1Key. */
   async saveUserProfilePhoto(file: { buffer: Buffer; mimetype: string; size: number }): Promise<string> {
     if (!file?.buffer?.length) {
       throw new BadRequestException('Profile photo file required');
@@ -140,13 +148,14 @@ export class UploadService {
         `Photo exceeds ${PHOTO_MAX_SIZE / 1024 / 1024} MB limit`,
       );
     }
-    const mime = (file.mimetype || '').toLowerCase().split(';')[0].trim();
+    const mime = this.normalizeMime(file.mimetype);
     if (!IMAGE_MIMES.has(mime)) {
       throw new BadRequestException(
         `Invalid photo type: ${file.mimetype}. Use JPEG, PNG, GIF, or WebP`,
       );
     }
-    return this.saveFile('user-photos', file.buffer, file.mimetype);
+    const rel = await this.saveFile('user-photos', file.buffer, mime);
+    return this.getPublicUrl(rel); // full URL, consistent with expert photos
   }
 
   /** Validate and save a single document (image or PDF). Returns public URL. */
