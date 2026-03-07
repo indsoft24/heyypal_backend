@@ -235,7 +235,7 @@ export class NotificationsService {
             if (data.conversationId) payload.conversationId = data.conversationId;
             const message: admin.messaging.Message = {
                 data: payload,
-                android: { priority: 'high', ttl: 604_800_000 },
+                android: { priority: 'high', ttl: 604_800_000, directBootOk: true },
                 token,
             };
             await this.firebaseApp.messaging().send(message);
@@ -271,7 +271,7 @@ export class NotificationsService {
             if (data.messageId) payload.messageId = data.messageId;
             const message: admin.messaging.Message = {
                 data: payload,
-                android: { priority: 'high', ttl: 604_800_000 },
+                android: { priority: 'high', ttl: 604_800_000, directBootOk: true },
                 token,
             };
             await this.firebaseApp.messaging().send(message);
