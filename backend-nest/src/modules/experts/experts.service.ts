@@ -201,10 +201,10 @@ export class ExpertsService {
         const profilePhoto2Key = ex.user.profilePhoto2Key ?? photos[1] ?? null;
         return {
           id: ex.user.id,
-          name: ex.user.name,
-          category: ex.category,
-          bio: ex.bio,
-          languages: ex.languagesSpoken,
+          name: ex.user.name ?? '',
+          category: ex.category ?? '',
+          bio: ex.bio ?? '',
+          languages: ex.languagesSpoken ?? [],
           profile_photo_1_key: this.toProfilePhotoUrl(profilePhoto1Key),
           profile_photo_2_key: this.toProfilePhotoUrl(profilePhoto2Key),
           price_per_minute: 20,
@@ -235,10 +235,10 @@ export class ExpertsService {
     const profilePhoto2Key = ex.user.profilePhoto2Key ?? photos[1] ?? null;
     return {
       id: ex.user.id,
-      name: ex.user.name,
-      category: ex.category,
-      bio: ex.bio,
-      languages: ex.languagesSpoken,
+      name: ex.user.name ?? '',
+      category: ex.category ?? '',
+      bio: ex.bio ?? '',
+      languages: ex.languagesSpoken ?? [],
       profile_photo_1_key: this.toProfilePhotoUrl(profilePhoto1Key),
       profile_photo_2_key: this.toProfilePhotoUrl(profilePhoto2Key),
       intro_video_url: ex.introVideoUrl,
