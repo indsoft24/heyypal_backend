@@ -191,4 +191,36 @@ export class NotificationsService {
             this.logger.error(`Error sending missed call push: ${error.message}`, error.stack);
         }
     }
+
+    /**
+     * Send professional data-only FCM for chat messages.
+     * Use data-only payload so Android can handle MessagingStyle + direct reply in onMessageReceived().
+     */
+    async sendChatPush(
+        token: string,
+        data: { senderId: string; senderName: string; content: string; messageId: string },
+    ): Promise<void> {
+        if (!this.firebaseApp || !token) return;
+        try {
+            const message: admin.messaging.Message = {
+                data: {
+                    type: 'chat',
+                    senderId: data.senderId,
+                    senderName: data.senderName,
+                    content: data.content,
+                    messageId: data.messageId,
+                },
+                android: {
+                    priority: 'high',
+                    // ttl=1 week for chat messages
+                    ttl: 604_800_000,
+                },
+                token,
+            };
+            await this.firebaseApp.messaging().send(message);
+            this.logger.log(`[chat_push_sent] from=${data.senderName} messageId=${data.messageId}`);
+        } catch (error) {
+            this.logger.error(`Error sending chat push: ${error.message}`, error.stack);
+        }
+    }
 }

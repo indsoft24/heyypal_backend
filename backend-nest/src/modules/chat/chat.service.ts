@@ -43,16 +43,13 @@ export class ChatService {
             this.logger.log(`Message stored: id=${savedMessage.id}, sender=${senderId}, receiver=${dto.receiverId}`);
 
             if (receiver.fcmToken) {
-                await this.notificationsService.sendPushNotification(
+                await this.notificationsService.sendChatPush(
                     receiver.fcmToken,
-                    sender.name || 'HeyyPal User',
-                    dto.content,
                     {
-                        type: 'chat',
                         senderId: senderId.toString(),
                         senderName: sender.name || 'HeyyPal User',
-                        messageId: savedMessage.id.toString(),
                         content: dto.content,
+                        messageId: savedMessage.id.toString(),
                     },
                 );
             }
